@@ -73,6 +73,7 @@ type UserOrganization {
   id: Int!
   name: String!
   members: [OrganizationMember]
+  announcements: [Announcement]
   groups: [GroupMember]
 }
 
