@@ -1,0 +1,127 @@
+// to make schema in db
+// npx prisma migrate dev --preview-feature --skip-generate --name "init"
+
+// to generate so can be used in db
+// npx prisma generate
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     Int     @id @default(autoincrement())
+  email                  String  @unique
+  phoneNumber            String? @unique 
+  firstName              String?
+  lastName               String?
+  passwordHash           String?  
+  accountCreated         Boolean
+
+  organizations          OrganizationMember[]
+  groups                 GroupMember[]
+  evacuationResponses    EvacuationResponse[]
+}
+
+model Group {
+  id                    Int      @id @default(autoincrement())
+  name                  String
+  organizationId        Int
+
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members               GroupMember[]
+  notificationSetting   GroupNotificationSetting?
+  evacuationEvents      EvacuationEvent[]
+  
+}
+
+model GroupMember {
+  id                    Int      @id @default(autoincrement())
+  userId                Int
+  groupId               Int
+  status                String
+  admin                 Boolean
+
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group                 Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+
+model GroupNotificationSetting {
+  id                    Int      @id @default(autoincrement())
+  groupId               Int      @unique
+  emailEnabled          Boolean
+  pushEnabled           Boolean
+  smsEnabled            Boolean
+
+  group                 Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model EvacuationEvent {
+  id                    Int      @unique @id @default(autoincrement())
+  startTime             String
+  endTime               String?
+  type                  String
+  createdBy             Int
+  status                String
+  groupId               Int
+  message               String?
+
+  responses             EvacuationResponse[]
+
+  group                 Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model EvacuationResponse {
+  id                    Int      @id @default(autoincrement())
+  response              String
+  userId                Int
+  time                  String
+  evacuationId          Int
+
+  evacuationEvent       EvacuationEvent @relation(fields: [evacuationId], references: [id], onDelete: Cascade)
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, evacuationId])
+}
+
+model Organization {
+  id                    Int      @id @default(autoincrement())
+  name                  String
+
+  members               OrganizationMember[]
+  groups                Group[]
+  announcements         Announcement[]
+}
+
+model OrganizationMember {
+  id                    Int      @id @default(autoincrement())
+  userId                Int
+  organizationId        Int
+  status                String
+  admin                 Boolean
+
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+
+model Announcement {
+  id                    Int      @id @default(autoincrement())
+  title                 String
+  description           String?
+  date                  String
+  organizationId        Int
+  createdBy             Int
+
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
