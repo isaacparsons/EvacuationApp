@@ -83,12 +83,13 @@ export const sendAlertEndedNotification = async (
 
   const subject = "Evacuation status update: safe to return";
   const message = `Evacuation for ${group.name} has ended, it is now safe to return`;
+  const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
 
   if (group?.notificationSetting?.emailEnabled) {
     await emailService.sendEmail(users, subject, message);
   }
   if (group?.notificationSetting?.pushEnabled) {
-    await pushNotificationService.sendNotifications(users, message);
+    await pushNotificationService.sendNotifications(users, message, appLink);
   }
 };
 

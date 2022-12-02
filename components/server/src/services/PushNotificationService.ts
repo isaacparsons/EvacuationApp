@@ -23,7 +23,7 @@ export default class PushNotificationService {
   public async sendNotifications(
     users: User[],
     message: string,
-    app_url: string
+    app_url?: string
   ) {
     const listOfIds = users.map((user) => user.id.toString());
     const notification = {
