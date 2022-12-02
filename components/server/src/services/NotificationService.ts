@@ -48,20 +48,6 @@ const getGroup = async (db: PrismaClient, groupId: number) => {
   });
 };
 
-const sendGroupNotification = async (
-  group: any,
-  users: User[],
-  subject: string,
-  message: string
-) => {
-  if (group?.notificationSetting?.emailEnabled) {
-    await emailService.sendEmail(users, subject, message);
-  }
-  if (group?.notificationSetting?.pushEnabled) {
-    await pushNotificationService.sendNotifications(users, message);
-  }
-};
-
 export const sendAlertNotification = async (data: SendAlertNotifications) => {
   const { db, evacuationEvent } = data;
 
@@ -72,10 +58,15 @@ export const sendAlertNotification = async (data: SendAlertNotifications) => {
     return;
   }
   const subject = "Evacuation Alert!";
-  const appLink = `${process.env.APP_LINK}/group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-  const message = `Evacuation issued for ${group.name} please visit ${appLink} for more information`;
+  const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
+  const message = `Evacuation issued for ${group.name}`;
 
-  await sendGroupNotification(group, users, subject, message);
+  if (group?.notificationSetting?.emailEnabled) {
+    await emailService.sendEmail(users, subject, message, appLink);
+  }
+  if (group?.notificationSetting?.pushEnabled) {
+    await pushNotificationService.sendNotifications(users, message, appLink);
+  }
 };
 
 export const sendAlertEndedNotification = async (
@@ -90,10 +81,15 @@ export const sendAlertEndedNotification = async (
     return;
   }
 
-  const subject = "Evacuation status pdate: safe to return";
+  const subject = "Evacuation status update: safe to return";
   const message = `Evacuation for ${group.name} has ended, it is now safe to return`;
 
-  await sendGroupNotification(group, users, subject, message);
+  if (group?.notificationSetting?.emailEnabled) {
+    await emailService.sendEmail(users, subject, message);
+  }
+  if (group?.notificationSetting?.pushEnabled) {
+    await pushNotificationService.sendNotifications(users, message);
+  }
 };
 
 export const sendPasswordResetNotification = async (user: User) => {

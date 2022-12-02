@@ -19,7 +19,8 @@ export default class EmailService {
   public sendEmail = async (
     users: User[],
     subject: string,
-    message: string
+    message: string,
+    link?: string
   ) => {
     try {
       const emailList = users.reduce((list, user, i) => {
@@ -28,12 +29,16 @@ export default class EmailService {
         }
         return `${list},${user.email}`;
       }, "");
-      await this.transporter.sendMail({
+      const options: any = {
         from: process.env.EMAIL,
         to: emailList,
         subject,
         text: message
-      });
+      };
+      if (link) {
+        options.html = `<a href=\"${link}\">link to app</a>`;
+      }
+      await this.transporter.sendMail(options);
       console.log(`Email sent to users: ${emailList}`);
     } catch (error) {
       console.log(error);
