@@ -22,8 +22,8 @@ type Mutation {
   updateUser(
     phoneNumber: String
     password: String
-    firstName: String!
-    lastName: String!
+    firstName: String
+    lastName: String
   ): User
   createGroup(
     organizationId: Int!
