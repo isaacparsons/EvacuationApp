@@ -37,6 +37,7 @@ type Mutation {
   ): GroupNotificationSetting
   inviteUsers(groupId: Int!, users: [InvitedGroupUser]): [GroupMember]
   updateInvite(groupId: Int!, response: String!): GroupMember
+  updateGroupMember(userId: Int!, groupId: Int!, admin: Boolean!): GroupMember
   removeMembers(memberIds: [Int]): [GroupMember]
   createEvacuationEvent(groupId: Int!, msg: String!): EvacuationEvent
   updateEvacuationEvent(evacuationId: Int!, status: String!): EvacuationEvent
@@ -44,14 +45,20 @@ type Mutation {
     evacuationId: Int!
     response: String!
   ): EvacuationResponse
-  createOrganization(name: String!): Organization
+  createOrganization(
+    name: String!
+    organizationNotificationSetting: OrganizationNotificationSettingInput!
+  ): Organization
   deleteOrganization(organizationId: Int!): Organization
+  updateOrganizationNotificationOptions(
+    organizationId: Int!
+    organizationNotificationSetting: OrganizationNotificationSettingInput!
+  ): OrganizationNotificationSetting
   inviteToOrganization(
     organizationId: Int!
     users: [InvitedOrganizationUser]
   ): [OrganizationMember]
   updateOrgInvite(organizationId: Int!, status: String!): OrganizationMember
-
   removeFromOrganization(
     organizationId: Int!
     userIds: [Int]
@@ -72,6 +79,7 @@ type Auth {
 type UserOrganization {
   id: Int!
   name: String!
+  notificationSetting: OrganizationNotificationSetting
   members: [OrganizationMember]
   announcements: [Announcement]
   groups: [GroupMember]
@@ -80,10 +88,25 @@ type UserOrganization {
 type Organization {
   id: Int!
   name: String!
+  notificationSetting: OrganizationNotificationSetting
 
   members: [OrganizationMember]
   announcements: [Announcement]
   groups: [Group]
+}
+
+type OrganizationNotificationSetting {
+  id: Int!
+  organizationId: Int!
+  emailEnabled: Boolean!
+  pushEnabled: Boolean!
+  smsEnabled: Boolean!
+}
+
+input OrganizationNotificationSettingInput {
+  emailEnabled: Boolean!
+  pushEnabled: Boolean!
+  smsEnabled: Boolean!
 }
 
 type OrganizationMember {

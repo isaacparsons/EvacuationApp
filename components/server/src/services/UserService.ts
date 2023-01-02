@@ -47,8 +47,9 @@ interface GetJoinedEntitiesInput {
 
 export const login = async (data: LoginInput) => {
   const { password, email, db } = data;
+  const emailLowercase = email.toLowerCase();
   const user = await db.user.findUnique({
-    where: { email },
+    where: { email: emailLowercase },
     include: {
       organizations: true,
       groups: true
@@ -74,9 +75,12 @@ export const login = async (data: LoginInput) => {
 export const signup = async (data: SignupInput): Promise<Auth> => {
   const { password, email, phoneNumber, firstName, lastName, db } = data;
   const passwordHash = await bcrypt.hash(password, 10);
+  const emailLowercase = email.toLowerCase();
+  const firstNameLowerCase = firstName.toLowerCase();
+  const lastNameLowerCase = lastName.toLowerCase();
   const existingUser = await db.user.findUnique({
     where: {
-      email
+      email: emailLowercase
     }
   });
   if (existingUser && existingUser.accountCreated) {
@@ -85,12 +89,12 @@ export const signup = async (data: SignupInput): Promise<Auth> => {
   let user;
   if (existingUser && !existingUser.accountCreated) {
     user = await db.user.update({
-      where: { email },
+      where: { email: emailLowercase },
       data: {
         phoneNumber,
         passwordHash,
-        firstName,
-        lastName,
+        firstName: firstNameLowerCase,
+        lastName: lastNameLowerCase,
         accountCreated: true
       },
       include: {
@@ -102,11 +106,11 @@ export const signup = async (data: SignupInput): Promise<Auth> => {
   if (!existingUser) {
     user = await db.user.create({
       data: {
-        email,
+        email: emailLowercase,
         phoneNumber,
         passwordHash,
-        firstName,
-        lastName,
+        firstName: firstNameLowerCase,
+        lastName: lastNameLowerCase,
         accountCreated: true
       },
       include: {
@@ -129,7 +133,7 @@ export const deleteUser = async (data: DeleteUserInput) => {
   const { email, db } = data;
   try {
     const user = await db.user.delete({
-      where: { email }
+      where: { email: email.toLowerCase() }
     });
     const userWithoutPassword = exclude<User, "passwordHash">(
       user,
@@ -155,8 +159,8 @@ export const updateUser = async (data: UpdateUserInput) => {
   const updateParams: Partial<User> = {
     ...(phoneNumber && { phoneNumber }),
     ...(accountCreated && { accountCreated }),
-    ...(firstName && { firstName }),
-    ...(lastName && { lastName })
+    ...(firstName && { firstName: firstName.toLowerCase() }),
+    ...(lastName && { lastName: lastName.toLowerCase() })
   };
   if (password) {
     const passwordHash = await bcrypt.hash(password, 10);
@@ -178,7 +182,9 @@ export const updateUser = async (data: UpdateUserInput) => {
 
 export const resetPassword = async (data: ResetPasswordInput) => {
   const { db, email } = data;
-  const user = await db.user.findUnique({ where: { email } });
+  const user = await db.user.findUnique({
+    where: { email: email.toLowerCase() }
+  });
   if (!user) {
     throw new Error(`No user found for email: ${email}`);
   }

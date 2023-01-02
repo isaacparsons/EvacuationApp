@@ -1,4 +1,6 @@
 export const USER1 = {
+  firstName: "test",
+  lastName: "1",
   email: "test@email.com",
   phoneNumber: "4031234567",
   accountCreated: true,
@@ -6,10 +8,18 @@ export const USER1 = {
 };
 
 export const USER2 = {
+  firstName: "test",
+  lastName: "2",
   email: "test2@email.com",
   phoneNumber: "4031234568",
   accountCreated: true,
   password: "123"
+};
+
+export const ORG_NOTIFICATION_SETTINGS = {
+  emailEnabled: false,
+  pushEnabled: false,
+  smsEnabled: false
 };
 
 export const ORG = {

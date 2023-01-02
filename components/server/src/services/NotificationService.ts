@@ -123,6 +123,8 @@ const sendCompleteSignupNotification = async (
 ) => {
   const token = tokenService.create(user);
   const signupLink = `${process.env.CLIENT_URL}/completeSignup?token=${token}`;
+
+  console.log(signupLink);
   await emailService.sendEmail(
     [user],
     "Complete Signup",

@@ -1,35 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 import { gql } from "apollo-server";
-import { deleteDb, updateInvite } from "../dev/dbUtil";
-import {
-  createOrg,
-  deleteOrg,
-  inviteUsersToOrg,
-  removeOrgMembers,
-  setupUser
-} from "../dev/dbUtil";
-import { USER2 } from "../dev/testData";
+import { setupUser, deleteDb } from "../dev/dbUtil";
 import {
   ORG,
+  ORG_NOTIFICATION_SETTINGS,
   ORG_ADMIN_MEMBER,
   ORG_NON_ADMIN_MEMBER,
-  USER1
+  USER1,
+  USER2
 } from "../dev/testData";
 import { server } from "../server";
-import TokenService from "../services/TokenService";
-import { InviteUser } from "../types";
 
 const prisma = new PrismaClient();
-const tokenService = new TokenService();
-
-interface InvitedOrganizationUser {
-  admin: boolean;
-  email: string;
-  inviteToGroups: InviteUser[];
-}
 
 describe("organization tests", () => {
-  beforeAll(async () => {
+  beforeEach(async () => {
     await deleteDb();
   });
 
@@ -39,28 +24,37 @@ describe("organization tests", () => {
       const result = await server.executeOperation(
         {
           query: gql`
-            mutation Mutation($name: String!) {
-              createOrganization(name: $name) {
+            mutation Mutation(
+              $name: String!
+              $organizationNotificationSetting: OrganizationNotificationSettingInput!
+            ) {
+              createOrganization(
+                name: $name
+                organizationNotificationSetting: $organizationNotificationSetting
+              ) {
                 id
-                name
                 members {
+                  admin
                   id
-                  userId
                   organizationId
                   status
-                  admin
-                  user {
-                    id
-                    email
-                    phoneNumber
-                    passwordHash
-                    accountCreated
-                  }
+                  userId
+                }
+                name
+                notificationSetting {
+                  emailEnabled
+                  id
+                  organizationId
+                  pushEnabled
+                  smsEnabled
                 }
               }
             }
           `,
-          variables: { name: ORG.name }
+          variables: {
+            name: ORG.name,
+            organizationNotificationSetting: ORG_NOTIFICATION_SETTINGS
+          }
         },
         { req: { headers: { authorization: `Bearer ${token}` } } } as any
       );
@@ -68,20 +62,18 @@ describe("organization tests", () => {
       expect(org).toEqual({
         id: expect.any(Number),
         name: ORG.name,
+        notificationSetting: {
+          ...ORG_NOTIFICATION_SETTINGS,
+          id: expect.any(Number),
+          organizationId: expect.any(Number)
+        },
         members: [
           {
             id: expect.any(Number),
             userId: user.id,
             organizationId: expect.any(Number),
             status: "accepted",
-            admin: true,
-            user: {
-              id: user.id,
-              email: user.email,
-              phoneNumber: user.phoneNumber,
-              passwordHash: user.passwordHash,
-              accountCreated: user.accountCreated
-            }
+            admin: true
           }
         ]
       });
@@ -293,65 +285,146 @@ describe("organization tests", () => {
     });
   });
 
-  // describe("remove users", () => {
-  //   it("should remove users from org if user is admin", async () => {
-  //     const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-  //     const { user: memberUser, token: memberUserToken } = await setupUser(
-  //       USER2
-  //     );
+  describe("remove users", () => {
+    it("should remove users from org if user is admin", async () => {
+      const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
+      const { user: memberUser, token: memberUserToken } = await setupUser(
+        USER2
+      );
 
-  //     const org = await prisma.organization.create({
-  //       data: {
-  //         ...ORG,
-  //         members: {
-  //           createMany: {
-  //             data: [
-  //               {
-  //                 userId: adminUser.id,
-  //                 ...ORG_ADMIN_MEMBER
-  //               },
-  //               {
-  //                 userId: memberUser.id,
-  //                 ...ORG_NON_ADMIN_MEMBER
-  //               }
-  //             ]
-  //           }
-  //         }
-  //       },
-  //       include: {
-  //         members: {
-  //           include: {
-  //             user: true
-  //           }
-  //         }
-  //       }
-  //     });
-  //     console.log(org);
-  //     const result = await server.executeOperation(
-  //       {
-  //         query: gql`
-  //           mutation RemoveFromOrganization(
-  //             $organizationId: Int!
-  //             $memberIds: [Int]
-  //           ) {
-  //             removeFromOrganization(
-  //               organizationId: $organizationId
-  //               memberIds: $memberIds
-  //             ) {
-  //               id
-  //               organizationId
-  //             }
-  //           }
-  //         `,
-  //         variables: { organizationId: org.id, memberIds }
-  //       },
-  //       {
-  //         req: { headers: { authorization: `Bearer ${adminUserToken}` } }
-  //       } as any
-  //     );
-  //   });
-  //   it("should not remove users from org if user is not admin", async () => {});
-  // });
+      const org = await prisma.organization.create({
+        data: {
+          ...ORG,
+          members: {
+            createMany: {
+              data: [
+                {
+                  userId: adminUser.id,
+                  ...ORG_ADMIN_MEMBER
+                },
+                {
+                  userId: memberUser.id,
+                  ...ORG_NON_ADMIN_MEMBER
+                }
+              ]
+            }
+          }
+        },
+        include: {
+          members: {
+            include: {
+              user: true
+            }
+          }
+        }
+      });
+      const result = await server.executeOperation(
+        {
+          query: gql`
+            mutation RemoveFromOrganization(
+              $organizationId: Int!
+              $userIds: [Int]
+            ) {
+              removeFromOrganization(
+                organizationId: $organizationId
+                userIds: $userIds
+              ) {
+                id
+                organizationId
+                user {
+                  email
+                  firstName
+                  id
+                  lastName
+                }
+              }
+            }
+          `,
+          variables: { organizationId: org.id, userIds: [memberUser.id] }
+        },
+        {
+          req: { headers: { authorization: `Bearer ${adminUserToken}` } }
+        } as any
+      );
+
+      expect(result.data?.removeFromOrganization).toEqual([
+        {
+          id: expect.any(Number),
+          organizationId: org.id,
+          user: {
+            email: USER2.email,
+            firstName: USER2.firstName,
+            lastName: USER2.lastName,
+            id: expect.any(Number)
+          }
+        }
+      ]);
+    });
+    it("should not remove users from org if user is not admin", async () => {
+      const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
+      const { user: memberUser, token: memberUserToken } = await setupUser(
+        USER2
+      );
+
+      const org = await prisma.organization.create({
+        data: {
+          ...ORG,
+          members: {
+            createMany: {
+              data: [
+                {
+                  userId: adminUser.id,
+                  ...ORG_ADMIN_MEMBER
+                },
+                {
+                  userId: memberUser.id,
+                  ...ORG_NON_ADMIN_MEMBER
+                }
+              ]
+            }
+          }
+        },
+        include: {
+          members: {
+            include: {
+              user: true
+            }
+          }
+        }
+      });
+      const result = await server.executeOperation(
+        {
+          query: gql`
+            mutation RemoveFromOrganization(
+              $organizationId: Int!
+              $userIds: [Int]
+            ) {
+              removeFromOrganization(
+                organizationId: $organizationId
+                userIds: $userIds
+              ) {
+                id
+                organizationId
+                user {
+                  email
+                  firstName
+                  id
+                  lastName
+                }
+              }
+            }
+          `,
+          variables: { organizationId: org.id, userIds: [adminUser.id] }
+        },
+        {
+          req: { headers: { authorization: `Bearer ${memberUserToken}` } }
+        } as any
+      );
+
+      expect(result.errors?.length).toEqual(1);
+      expect(result.errors?.[0]?.message).toEqual("Not Authorised!");
+    });
+  });
   describe("update invite", () => {
     it("should update invite if the invite is for the user", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);

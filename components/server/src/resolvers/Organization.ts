@@ -11,7 +11,10 @@ import {
   removeFromOrganization,
   updateOrgInvite
 } from "../services/OrganizationService";
-import { getOrganizationForUser } from "../services/OrganizationService";
+import {
+  getOrganizationForUser,
+  updateOrganizationNotificationOptions
+} from "../services/OrganizationService";
 import { Context } from "../types";
 
 const emailService = new EmailService();
@@ -60,6 +63,18 @@ const OrganizationResolver = {
       info
     ): Promise<any> => {
       const organization = await deleteOrganization({
+        db: context.db,
+        ...args
+      });
+      return organization;
+    },
+    updateOrganizationNotificationOptions: async (
+      parent,
+      args,
+      context: Context,
+      info
+    ): Promise<any> => {
+      const organization = await updateOrganizationNotificationOptions({
         db: context.db,
         ...args
       });

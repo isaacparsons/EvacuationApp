@@ -23,15 +23,28 @@ interface IsOrgAdminInput {
   organizationId: number;
 }
 
+interface OrganizationNotificationSettingInput {
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  smsEnabled: boolean;
+}
+
 interface CreateOrganizationInput {
   db: PrismaClient;
   name: string;
   userId: number;
+  organizationNotificationSetting: OrganizationNotificationSettingInput;
 }
 
 interface DeleteOrganizationInput {
   db: PrismaClient;
   organizationId: number;
+}
+
+interface UpdateOrganizationNotificationSettingInput {
+  db: PrismaClient;
+  organizationId: number;
+  organizationNotificationSetting: OrganizationNotificationSettingInput;
 }
 
 interface InvitedOrganizationUser {
@@ -80,7 +93,11 @@ export const getOrganizationsForUser = async (data: GetOrganizationsInput) => {
       userId
     },
     include: {
-      organization: true
+      organization: {
+        include: {
+          members: true
+        }
+      }
     }
   });
 
@@ -100,6 +117,7 @@ export const getOrganization = async (data: GetOrganizationInput) => {
           user: true
         }
       },
+      notificationSetting: true,
       announcements: true
     }
   });
@@ -120,6 +138,7 @@ export const getOrganizationForUser = async (
           user: true
         }
       },
+      notificationSetting: true,
       announcements: true
     }
   });
@@ -146,7 +165,7 @@ export const getOrganizationForUser = async (
 };
 
 export const createOrganization = async (data: CreateOrganizationInput) => {
-  const { name, userId, db } = data;
+  const { name, userId, db, organizationNotificationSetting } = data;
   const organization = await db.organization.create({
     data: {
       name,
@@ -158,10 +177,14 @@ export const createOrganization = async (data: CreateOrganizationInput) => {
             connect: { id: userId }
           }
         }
+      },
+      notificationSetting: {
+        create: organizationNotificationSetting
       }
     },
     include: {
       groups: true,
+      notificationSetting: true,
       members: {
         include: {
           user: true
@@ -180,6 +203,19 @@ export const deleteOrganization = async (data: DeleteOrganizationInput) => {
     }
   });
   return organization;
+};
+
+export const updateOrganizationNotificationOptions = async (
+  data: UpdateOrganizationNotificationSettingInput
+) => {
+  const { organizationId, organizationNotificationSetting, db } = data;
+  const setting = await db.organizationNotificationSetting.update({
+    where: {
+      organizationId
+    },
+    data: organizationNotificationSetting
+  });
+  return setting;
 };
 
 export const inviteToOrganization = async (data: InviteToOrganizationInput) => {
@@ -254,6 +290,9 @@ export const removeFromOrganization = async (
               userId,
               organizationId
             }
+          },
+          include: {
+            user: true
           }
         });
       } catch (error) {

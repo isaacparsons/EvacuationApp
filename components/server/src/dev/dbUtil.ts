@@ -38,6 +38,8 @@ export const setupUser = async (data: {
       email: data.email,
       phoneNumber: data.phoneNumber,
       accountCreated: data.accountCreated,
+      firstName: data.firstName,
+      lastName: data.lastName,
       passwordHash: hash
     }
   });

@@ -95,10 +95,21 @@ model EvacuationResponse {
 model Organization {
   id                    Int      @id @default(autoincrement())
   name                  String
+  notificationSetting   OrganizationNotificationSetting?
 
   members               OrganizationMember[]
   groups                Group[]
   announcements         Announcement[]
+}
+
+model OrganizationNotificationSetting {
+  id                    Int      @id @default(autoincrement())
+  organizationId        Int      @unique
+  emailEnabled          Boolean
+  pushEnabled           Boolean
+  smsEnabled            Boolean
+
+  group                 Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 model OrganizationMember {

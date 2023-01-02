@@ -61,6 +61,13 @@ interface UpdateInviteInput {
   response: string;
 }
 
+interface UpdateGroupMemberInput {
+  db: PrismaClient;
+  groupId: number;
+  userId: number;
+  admin: boolean;
+}
+
 export const getGroup = async (data: GetGroupInput) => {
   const { db, groupId } = data;
 
@@ -236,6 +243,22 @@ export const updateInvite = async (
     },
     data: {
       status: response
+    }
+  });
+  return groupMember;
+};
+
+export const updateGroupMember = async (data: UpdateGroupMemberInput) => {
+  const { groupId, userId, admin, db } = data;
+  const groupMember = await db.groupMember.update({
+    where: {
+      userId_groupId: {
+        userId,
+        groupId
+      }
+    },
+    data: {
+      admin
     }
   });
   return groupMember;

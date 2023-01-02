@@ -42,6 +42,7 @@ const AuthResolver = {
     updateUser: async (parent, args, context, info) => {
       const user = await updateUser({
         user: context.user,
+        db: context.db,
         ...args
       });
       return user;

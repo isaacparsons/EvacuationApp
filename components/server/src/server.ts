@@ -49,6 +49,7 @@ const auth = async ({ req }) => {
         organizations: true
       }
     });
+
     if (user) {
       result.user = user;
     }

@@ -15,7 +15,7 @@ export const permissions = shield(
       resetPassword: isAuthenticated,
       deleteUser: isAuthenticated,
       updateUser: isAuthenticated,
-      createGroup: isAuthenticated,
+      createGroup: chain(isAuthenticated, isOrgAdmin),
       deleteGroup: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       updateGroupNotificationOptions: chain(
         isAuthenticated,
@@ -23,6 +23,7 @@ export const permissions = shield(
       ),
       inviteUsers: chain(isAuthenticated, or(isGroupAdmin, isOrgAdmin)),
       updateInvite: isAuthenticated,
+      updateGroupMember: chain(isAuthenticated, isOrgAdmin),
       removeMembers: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       createEvacuationEvent: chain(
         isAuthenticated,
