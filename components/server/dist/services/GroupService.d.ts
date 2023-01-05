@@ -1,4 +1,4 @@
-import { PrismaClient, Group, GroupMember } from "@prisma/client";
+import { Group, GroupMember, PrismaClient } from "@prisma/client";
 import { InviteUser } from "../types";
 interface GetGroupInput {
     db: PrismaClient;
@@ -46,6 +46,12 @@ interface UpdateInviteInput {
     userId: number;
     response: string;
 }
+interface UpdateGroupMemberInput {
+    db: PrismaClient;
+    groupId: number;
+    userId: number;
+    admin: boolean;
+}
 export declare const getGroup: (data: GetGroupInput) => Promise<(Group & {
     members: (GroupMember & {
         user: import(".prisma/client").User;
@@ -72,5 +78,6 @@ export declare const deleteGroup: (data: DeleteGroupInput) => Promise<Group>;
 export declare const updateGroupNotificationOptions: (data: UpdateGroupNotificationSettingInput) => Promise<import(".prisma/client").GroupNotificationSetting>;
 export declare const inviteUsers: (data: InvitedUsersInput) => Promise<GroupMember[]>;
 export declare const updateInvite: (data: UpdateInviteInput) => Promise<GroupMember>;
+export declare const updateGroupMember: (data: UpdateGroupMemberInput) => Promise<GroupMember>;
 export declare const removeMembers: (data: RemoveMembersInput) => Promise<(GroupMember | null | undefined)[]>;
 export {};

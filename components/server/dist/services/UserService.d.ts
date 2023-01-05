@@ -1,5 +1,5 @@
-import { Auth } from "../types";
 import { PrismaClient, User } from "@prisma/client";
+import { Auth } from "../types";
 interface SignupInput {
     db: PrismaClient;
     email: string;

@@ -1,5 +1,5 @@
 import { Group } from "@prisma/client";
-import { GroupNotificationSetting, Context } from "../types";
+import { Context, GroupNotificationSetting } from "../types";
 declare const GroupResolver: {
     Query: {
         getGroup: (parent: any, args: any, context: Context, info: any) => Promise<(Group & {
@@ -31,6 +31,7 @@ declare const GroupResolver: {
         inviteUsers: (parent: any, args: any, context: any, info: any) => Promise<import(".prisma/client").GroupMember[]>;
         removeMembers: (parent: any, args: any, context: any, info: any) => Promise<(import(".prisma/client").GroupMember | null | undefined)[]>;
         updateInvite: (parent: any, args: any, context: any, info: any) => Promise<import(".prisma/client").GroupMember>;
+        updateGroupMember: (parent: any, args: any, context: any, info: any) => Promise<import(".prisma/client").GroupMember>;
     };
 };
 export default GroupResolver;

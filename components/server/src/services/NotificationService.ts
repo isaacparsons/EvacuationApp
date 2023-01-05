@@ -1,4 +1,5 @@
 import {
+  Announcement,
   EvacuationEvent,
   Organization,
   OrganizationMember,
@@ -13,6 +14,11 @@ import PushNotificationService from "./PushNotificationService";
 interface SendAlertNotifications {
   db: PrismaClient;
   evacuationEvent: EvacuationEvent;
+}
+
+interface SendAnnouncementNotification {
+  db: PrismaClient;
+  announcement: Announcement;
 }
 
 interface SendCompleteSignupNotifications {
@@ -46,6 +52,53 @@ const getGroup = async (db: PrismaClient, groupId: number) => {
       }
     }
   });
+};
+
+const getOrganization = async (db: PrismaClient, organizationId: number) => {
+  return db.organization.findUnique({
+    where: {
+      id: organizationId
+    },
+    include: {
+      notificationSetting: true,
+      members: {
+        where: {
+          status: "accepted"
+        },
+        include: {
+          user: true
+        }
+      }
+    }
+  });
+};
+
+export const sendAnnouncementNotification = async (
+  data: SendAnnouncementNotification
+) => {
+  const { db, announcement } = data;
+  const organization = await getOrganization(db, announcement.organizationId);
+  const users = organization?.members.map((member) => member.user);
+
+  if (!users || users.length === 0 || !organization) {
+    return;
+  }
+  const subject = `Announcement - ${announcement.title}`;
+  // const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
+
+  if (organization?.notificationSetting?.emailEnabled) {
+    await emailService.sendEmail(
+      users,
+      subject,
+      announcement.description || ""
+    );
+  }
+  if (organization?.notificationSetting?.pushEnabled) {
+    await pushNotificationService.sendNotifications(
+      users,
+      announcement.description || ""
+    );
+  }
 };
 
 export const sendAlertNotification = async (data: SendAlertNotifications) => {

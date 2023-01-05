@@ -1,5 +1,8 @@
 import EmailService from "../services/EmailService";
-import { sendCompleteSignupNotifications } from "../services/NotificationService";
+import {
+  sendAnnouncementNotification,
+  sendCompleteSignupNotifications
+} from "../services/NotificationService";
 import {
   createOrganization,
   createOrganizationAnnouncement,
@@ -124,12 +127,13 @@ const OrganizationResolver = {
       context: Context,
       info
     ): Promise<any> => {
-      const organization = await createOrganizationAnnouncement({
+      const announcement = await createOrganizationAnnouncement({
         db: context.db,
         userId: context.user.id,
         ...args
       });
-      return organization;
+      await sendAnnouncementNotification({ announcement, db: context.db });
+      return announcement;
     },
     deleteOrganizationAnnouncement: async (
       parent,
