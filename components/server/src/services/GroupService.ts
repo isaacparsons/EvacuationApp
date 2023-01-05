@@ -65,6 +65,7 @@ interface UpdateGroupMemberInput {
   db: PrismaClient;
   groupId: number;
   userId: number;
+  editorId: number;
   admin: boolean;
 }
 
@@ -249,7 +250,10 @@ export const updateInvite = async (
 };
 
 export const updateGroupMember = async (data: UpdateGroupMemberInput) => {
-  const { groupId, userId, admin, db } = data;
+  const { groupId, userId, editorId, admin, db } = data;
+  if (editorId === userId) {
+    throw new Error("Can't edit your own admin status");
+  }
   const groupMember = await db.groupMember.update({
     where: {
       userId_groupId: {

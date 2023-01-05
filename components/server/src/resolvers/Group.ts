@@ -80,6 +80,7 @@ const GroupResolver = {
     updateGroupMember: async (parent, args, context, info) => {
       const groupMember = await updateGroupMember({
         ...args,
+        editorId: context.user.id,
         db: context.db
       });
       return groupMember;
