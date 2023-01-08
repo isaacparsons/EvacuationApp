@@ -11,6 +11,18 @@ interface GetOrganizationInput {
   organizationId: number;
 }
 
+interface GetOrganizationMembersInput {
+  db: PrismaClient;
+  organizationId: number;
+  cursor?: number;
+}
+
+interface GetAnnouncementsInput {
+  db: PrismaClient;
+  organizationId: number;
+  cursor?: number;
+}
+
 interface GetOrganizationForUserInput {
   db: PrismaClient;
   organizationId: number;
@@ -122,6 +134,38 @@ export const getOrganization = async (data: GetOrganizationInput) => {
     }
   });
   return organization;
+};
+
+export const getOrganizationMembers = async (
+  data: GetOrganizationMembersInput
+) => {
+  const { organizationId, db, cursor } = data;
+  const organizationMembers = await db.organizationMember.findMany({
+    ...(cursor && { skip: 1 }),
+    ...(cursor && {
+      cursor: {
+        id: cursor
+      }
+    }),
+    take: 5,
+    orderBy: {
+      id: "asc"
+    },
+    where: {
+      organizationId
+    },
+    include: {
+      user: true
+    }
+  });
+
+  return {
+    data: organizationMembers,
+    cursor:
+      organizationMembers.length > 0
+        ? organizationMembers[organizationMembers.length - 1].id
+        : cursor
+  };
 };
 
 export const getOrganizationForUser = async (
@@ -332,4 +376,30 @@ export const deleteOrganizationAnnouncement = async (
     }
   });
   return announcement;
+};
+
+export const getAnnouncements = async (data: GetAnnouncementsInput) => {
+  const { organizationId, db, cursor } = data;
+  const announcements = await db.announcement.findMany({
+    ...(cursor && { skip: 1 }),
+    ...(cursor && {
+      cursor: {
+        id: cursor
+      }
+    }),
+    take: 5,
+    orderBy: {
+      id: "asc"
+    },
+    where: {
+      organizationId
+    }
+  });
+  return {
+    data: announcements,
+    cursor:
+      announcements.length > 0
+        ? announcements[announcements.length - 1].id
+        : cursor
+  };
 };

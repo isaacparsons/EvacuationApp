@@ -9,7 +9,11 @@ import {
   updateGroupNotificationOptions,
   updateInvite
 } from "../services/GroupService";
-import { getGroupForUser, updateGroupMember } from "../services/GroupService";
+import {
+  getGroupForUser,
+  updateGroupMember,
+  getGroupMembers
+} from "../services/GroupService";
 import { Context, GroupNotificationSetting } from "../types";
 
 const GroupResolver = {
@@ -24,6 +28,12 @@ const GroupResolver = {
       return getGroupForUser({
         userId: context.user.id,
         groupId: args.groupId,
+        db: context.db
+      });
+    },
+    getGroupMembers: async (parent, args, context: Context, info) => {
+      return getGroupMembers({
+        ...args,
         db: context.db
       });
     }

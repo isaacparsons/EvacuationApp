@@ -7,8 +7,12 @@ export const permissions = shield(
       getOrganizations: isAuthenticated,
       getOrganization: chain(isAuthenticated, isOrgAdmin),
       getOrganizationForUser: isAuthenticated,
+      getOrganizationMembers: isAuthenticated,
+      getAnnouncements: isAuthenticated,
       getGroup: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       getGroupForUser: isAuthenticated,
+      getGroupMembers: isAuthenticated,
+      getEvacuationEvents: isAuthenticated,
       getEvacuationEvent: isAuthenticated
     },
     Mutation: {

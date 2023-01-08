@@ -35,9 +35,7 @@ export default class EmailService {
         subject,
         text: message
       };
-      if (link) {
-        options.html = `<a href=\"${link}\">link to app</a>`;
-      }
+
       await this.transporter.sendMail(options);
       console.log(`Email sent to users: ${emailList}`);
     } catch (error) {

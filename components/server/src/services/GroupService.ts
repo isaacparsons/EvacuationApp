@@ -16,6 +16,7 @@ interface GetGroupForUserInput {
 interface GetGroupMembersInput {
   db: PrismaClient;
   groupId: number;
+  cursor?: number;
 }
 
 interface GroupNotificationSettingInput {
@@ -139,6 +140,36 @@ export const getGroupForUser = async (data: GetGroupForUserInput) => {
     }
   });
   return group?.groups ? group?.groups[0].group : null;
+};
+
+export const getGroupMembers = async (data: GetGroupMembersInput) => {
+  const { groupId, db, cursor } = data;
+  const groupMembers = await db.groupMember.findMany({
+    ...(cursor && { skip: 1 }),
+    ...(cursor && {
+      cursor: {
+        id: cursor
+      }
+    }),
+    take: 5,
+    orderBy: {
+      id: "asc"
+    },
+    where: {
+      groupId
+    },
+    include: {
+      user: true
+    }
+  });
+
+  return {
+    data: groupMembers,
+    cursor:
+      groupMembers.length > 0
+        ? groupMembers[groupMembers.length - 1].id
+        : cursor
+  };
 };
 
 export const createGroup = async (data: CreateGroupInput): Promise<Group> => {

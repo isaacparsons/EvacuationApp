@@ -9,6 +9,7 @@ import {
   deleteOrganization,
   deleteOrganizationAnnouncement,
   getOrganization,
+  getOrganizationMembers,
   getOrganizationsForUser,
   inviteToOrganization,
   removeFromOrganization,
@@ -19,6 +20,7 @@ import {
   updateOrganizationNotificationOptions
 } from "../services/OrganizationService";
 import { Context } from "../types";
+import { getAnnouncements } from "../services/OrganizationService";
 
 const emailService = new EmailService();
 
@@ -42,6 +44,18 @@ const OrganizationResolver = {
         db: context.db,
         organizationId: args.organizationId,
         userId: context.user.id
+      });
+    },
+    getOrganizationMembers: async (parent, args, context: Context, info) => {
+      return getOrganizationMembers({
+        db: context.db,
+        ...args
+      });
+    },
+    getAnnouncements: async (parent, args, context: Context, info) => {
+      return getAnnouncements({
+        db: context.db,
+        ...args
       });
     }
   },

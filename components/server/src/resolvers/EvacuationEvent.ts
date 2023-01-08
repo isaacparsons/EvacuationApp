@@ -1,4 +1,7 @@
-import { getInProgressEvacuationEvents } from "../services/EvacuationEventService";
+import {
+  getInProgressEvacuationEvents,
+  getEvacuationEvents
+} from "../services/EvacuationEventService";
 import {
   createEvent,
   createEventResponse,
@@ -14,6 +17,13 @@ import {
 
 const EvacuationEventResolver = {
   Query: {
+    getEvacuationEvents: async (parent, args, context, info) => {
+      const evacuationEvents = await getEvacuationEvents({
+        db: context.db,
+        ...args
+      });
+      return evacuationEvents;
+    },
     getEvacuationEvent: async (parent, args, context, info) => {
       const evacuationEvent = await getEvacuationEvent({
         db: context.db,

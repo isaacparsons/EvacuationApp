@@ -2,8 +2,15 @@ type Query {
   getOrganizations: [OrganizationMember]
   getOrganization(organizationId: Int!): Organization
   getOrganizationForUser(organizationId: Int!): UserOrganization
+  getOrganizationMembers(
+    organizationId: Int!
+    cursor: Int
+  ): GetOrganizationMembers
+  getAnnouncements(organizationId: Int!, cursor: Int): GetAnnouncements
   getGroup(groupId: Int!): Group
   getGroupForUser(groupId: Int!): UserGroup
+  getGroupMembers(groupId: Int!, cursor: Int): GetGroupMembers
+  getEvacuationEvents(groupId: Int!, cursor: Int): GetEvacuationEvents
   getEvacuationEvent(evacuationId: Int!): EvacuationEvent
   getInProgressEvacuationEvents: [EvacuationEvent]
   getJoinedEntities: User
@@ -74,6 +81,26 @@ type Mutation {
 type Auth {
   token: String!
   user: User!
+}
+
+type GetOrganizationMembers {
+  data: [OrganizationMember]
+  cursor: Int
+}
+
+type GetAnnouncements {
+  data: [Announcement]
+  cursor: Int
+}
+
+type GetGroupMembers {
+  data: [GroupMember]
+  cursor: Int
+}
+
+type GetEvacuationEvents {
+  data: [EvacuationEvent]
+  cursor: Int
 }
 
 type UserOrganization {

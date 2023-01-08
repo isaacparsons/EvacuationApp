@@ -7,6 +7,12 @@ interface GetEvacuationEvent {
   evacuationId: number;
 }
 
+interface GetEvacuationEventsInput {
+  db: PrismaClient;
+  groupId: number;
+  cursor?: number;
+}
+
 interface GetInProgressEvacuationEvents {
   db: PrismaClient;
   userId: number;
@@ -31,6 +37,33 @@ interface CreateEvacuationResponse {
   response: string;
   userId: number;
 }
+
+export const getEvacuationEvents = async (data: GetEvacuationEventsInput) => {
+  const { groupId, db, cursor } = data;
+  const evacuationEvents = await db.evacuationEvent.findMany({
+    ...(cursor && { skip: 1 }),
+    ...(cursor && {
+      cursor: {
+        id: cursor
+      }
+    }),
+    take: 5,
+    orderBy: {
+      id: "asc"
+    },
+    where: {
+      groupId
+    }
+  });
+
+  return {
+    data: evacuationEvents,
+    cursor:
+      evacuationEvents.length > 0
+        ? evacuationEvents[evacuationEvents.length - 1].id
+        : cursor
+  };
+};
 
 export const getEvacuationEvent = async (data: GetEvacuationEvent) => {
   const { db, evacuationId } = data;
