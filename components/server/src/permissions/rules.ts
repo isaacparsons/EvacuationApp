@@ -38,11 +38,11 @@ export const isGroupAdmin = rule()(async (parent, args, ctx: Context, info) => {
 
 export const isOrgAdmin = rule()(async (parent, args, ctx: Context, info) => {
   let member;
-  if (args.annoucementId) {
+  if (args.announcementId) {
     member = await getOrgMemberFromAnnouncementId(
       ctx.db,
       ctx.user.id,
-      args.annoucementId
+      args.announcementId
     );
   }
   if (args.evacuationId) {

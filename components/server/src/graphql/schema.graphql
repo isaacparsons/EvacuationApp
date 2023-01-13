@@ -194,6 +194,7 @@ type Group {
 
 type UserGroup {
   id: Int!
+  organizationId: Int!
   name: String!
   members: [GroupMember]
   evacuationEvents: [EvacuationEvent]

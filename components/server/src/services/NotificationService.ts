@@ -7,7 +7,6 @@ import {
   User
 } from "@prisma/client";
 import TokenService from "../../dist/services/TokenService";
-import { GroupMember } from "../types";
 import EmailService from "./EmailService";
 import PushNotificationService from "./PushNotificationService";
 
@@ -112,7 +111,7 @@ export const sendAlertNotification = async (data: SendAlertNotifications) => {
   }
   const subject = "Evacuation Alert!";
   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-  const message = `Evacuation issued for ${group.name}`;
+  const message = `Evacuation issued for ${group.name} \n message: ${evacuationEvent.message}`;
 
   if (group?.notificationSetting?.emailEnabled) {
     await emailService.sendEmail(users, subject, message, appLink);
@@ -184,5 +183,3 @@ const sendCompleteSignupNotification = async (
     `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n ${signupLink}`
   );
 };
-
-export const sendOrgAnnouncementNotification = () => {};
