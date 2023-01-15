@@ -13,14 +13,13 @@ import {
   getOrganizationsForUser,
   inviteToOrganization,
   removeFromOrganization,
-  updateOrgInvite
-} from "../services/OrganizationService";
-import {
+  updateOrgInvite,
   getOrganizationForUser,
-  updateOrganizationNotificationOptions
+  updateOrganizationNotificationOptions,
+  getAnnouncements
 } from "../services/OrganizationService";
+
 import { Context } from "../types";
-import { getAnnouncements } from "../services/OrganizationService";
 
 const emailService = new EmailService();
 
@@ -146,7 +145,11 @@ const OrganizationResolver = {
         userId: context.user.id,
         ...args
       });
-      await sendAnnouncementNotification({ announcement, db: context.db });
+      await sendAnnouncementNotification({
+        announcement,
+        groupIds: args.groupIds,
+        db: context.db
+      });
       return announcement;
     },
     deleteOrganizationAnnouncement: async (

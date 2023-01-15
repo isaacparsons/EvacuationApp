@@ -6,9 +6,10 @@ import {
   PrismaClient,
   User
 } from "@prisma/client";
-import TokenService from "../../dist/services/TokenService";
+
 import EmailService from "./EmailService";
 import PushNotificationService from "./PushNotificationService";
+import TokenService from "./TokenService";
 
 interface SendAlertNotifications {
   db: PrismaClient;
@@ -18,6 +19,7 @@ interface SendAlertNotifications {
 interface SendAnnouncementNotification {
   db: PrismaClient;
   announcement: Announcement;
+  groupIds?: number[];
 }
 
 interface SendCompleteSignupNotifications {
@@ -72,12 +74,47 @@ const getOrganization = async (db: PrismaClient, organizationId: number) => {
   });
 };
 
+const getGroupMembersByGroupIds = async (
+  db: PrismaClient,
+  groupIds: number[]
+) => {
+  const groups = await Promise.all(
+    groupIds.map(async (groupId) => {
+      return db.group.findUnique({
+        where: {
+          id: groupId
+        },
+        include: {
+          members: {
+            where: {
+              status: "accepted"
+            },
+            include: {
+              user: true
+            }
+          }
+        }
+      });
+    })
+  );
+  const users = groups.reduce((prev, group) => {
+    const groupUsers = group?.members.map((member) => member.user) ?? [];
+    return [...prev, ...groupUsers];
+  }, []);
+  return users;
+};
+
 export const sendAnnouncementNotification = async (
   data: SendAnnouncementNotification
 ) => {
-  const { db, announcement } = data;
+  const { db, announcement, groupIds } = data;
   const organization = await getOrganization(db, announcement.organizationId);
-  const users = organization?.members.map((member) => member.user);
+  let users: User[] = [];
+  if (groupIds) {
+    users = await getGroupMembersByGroupIds(db, groupIds);
+  } else {
+    users = organization?.members.map((member) => member.user) ?? [];
+  }
 
   if (!users || users.length === 0 || !organization) {
     return;

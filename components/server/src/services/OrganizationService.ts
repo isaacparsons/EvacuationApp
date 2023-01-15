@@ -277,10 +277,10 @@ export const inviteToOrganization = async (data: InviteToOrganizationInput) => {
           user: {
             connectOrCreate: {
               where: {
-                email: user.email
+                email: user.email.toLowerCase()
               },
               create: {
-                email: user.email,
+                email: user.email.toLowerCase(),
                 accountCreated: false
               }
             }

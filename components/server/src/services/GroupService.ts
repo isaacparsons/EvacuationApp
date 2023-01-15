@@ -238,7 +238,7 @@ export const inviteUsers = async (
           },
           user: {
             connect: {
-              email: user.email
+              email: user.email.toLowerCase()
             }
           }
         },
