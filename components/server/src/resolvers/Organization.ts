@@ -1,4 +1,3 @@
-import EmailService from "../services/EmailService";
 import {
   sendAnnouncementNotification,
   sendCompleteSignupNotifications
@@ -20,8 +19,6 @@ import {
 } from "../services/OrganizationService";
 
 import { Context } from "../types";
-
-const emailService = new EmailService();
 
 const OrganizationResolver = {
   Query: {

@@ -64,6 +64,7 @@ model GroupNotificationSetting {
   group                 Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
+
 model EvacuationEvent {
   id                    Int      @unique @id @default(autoincrement())
   startTime             String

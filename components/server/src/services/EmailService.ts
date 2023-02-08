@@ -32,9 +32,13 @@ export default class EmailService {
       const options: any = {
         from: process.env.EMAIL,
         to: emailList,
-        subject,
-        text: message
+        subject
       };
+      if (link) {
+        options.html = `<p>${message}<a href="${link}">Sign up</a></p>`;
+      } else {
+        options.text = message;
+      }
 
       await this.transporter.sendMail(options);
       console.log(`Email sent to users: ${emailList}`);

@@ -1,6 +1,4 @@
-// import { Group, GroupMember, Prisma, PrismaClient } from "@prisma/client";
 import { Group, GroupMember, Prisma, PrismaClient } from "@prisma/client";
-// import EmailService from './EmailService';
 import { InviteUser } from "../types";
 
 interface GetGroupInput {

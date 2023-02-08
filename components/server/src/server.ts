@@ -1,17 +1,14 @@
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { readFileSync } from "fs";
-
 import { ApolloServer } from "apollo-server";
-
 import { User } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { applyMiddleware } from "graphql-middleware";
-import { authDirectiveTransformer } from "./directives/auth";
-import { requiredScopesDirectiveTransformer } from "./directives/requiredScopes";
 import { resolvers } from "./graphql/resolver";
 import { permissions } from "./permissions/index";
 import { GraphQLErrorsHandler } from "./plugins/error";
 import TokenService from "./services/TokenService";
+import logger from "./config/logger";
 
 const tokenService = new TokenService();
 
@@ -24,33 +21,27 @@ let schema = makeExecutableSchema({
   resolvers
 });
 schema = applyMiddleware(schema, permissions);
-// schema = requiredScopesDirectiveTransformer(schema);
-// schema = authDirectiveTransformer(schema);
 
 interface InitialContext {
   db: PrismaClient;
   user?: User;
+  log?: any;
 }
 
 const auth = async ({ req }) => {
+  const log = logger("Kiwitinohk Communications App");
+  log.info("test");
   const prisma: PrismaClient = new PrismaClient();
-  const result: InitialContext = { db: prisma };
+  const result: InitialContext = { db: prisma, log };
   if (req.headers.authorization) {
     const token = req.headers.authorization.replace("Bearer ", "");
     const { userId } = tokenService.verify(token);
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        groups: {
-          include: {
-            group: true
-          }
-        },
-        organizations: true
-      }
+      where: { id: userId }
     });
 
     if (user) {
+      result.log = logger("Kiwitinohk Communications App", { userId: user.id });
       result.user = user;
     }
   }
@@ -60,12 +51,5 @@ const auth = async ({ req }) => {
 export const server = new ApolloServer({
   schema,
   context: auth,
-  // cors: {
-  //   origin: [
-  //     'http://localhost.com:3000',
-  //     'http://ec2-3-19-24-165.us-east-2.compute.amazonaws.com',
-  //     'https://studio.apollographql.com'
-  //   ]
-  // },
   plugins: [GraphQLErrorsHandler]
 });

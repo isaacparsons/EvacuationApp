@@ -192,8 +192,6 @@ export const resetPassword = async (data: ResetPasswordInput) => {
     user,
     "passwordHash"
   );
-  // const emailService = new EmailService();
-  // await emailService.sendPasswordReset(user);
   return user;
 };
 

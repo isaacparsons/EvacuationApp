@@ -3,6 +3,7 @@ import {
   EvacuationEvent,
   Organization,
   OrganizationMember,
+  OrganizationNotificationSetting,
   PrismaClient,
   User
 } from "@prisma/client";
@@ -10,6 +11,7 @@ import {
 import EmailService from "./EmailService";
 import PushNotificationService from "./PushNotificationService";
 import TokenService from "./TokenService";
+import { GroupNotificationSetting } from "../types";
 
 interface SendAlertNotifications {
   db: PrismaClient;
@@ -104,6 +106,36 @@ const getGroupMembersByGroupIds = async (
   return users;
 };
 
+const sendOrganizationNotifications = async (
+  notificationSettings: OrganizationNotificationSetting,
+  users: User[],
+  subject: string,
+  message: string,
+  appLink?: string
+) => {
+  if (notificationSettings.emailEnabled) {
+    await emailService.sendEmail(users, subject, message);
+  }
+  if (notificationSettings.pushEnabled) {
+    await pushNotificationService.sendNotifications(users, message, appLink);
+  }
+};
+
+const sendGroupNotifications = async (
+  notificationSettings: GroupNotificationSetting,
+  users: User[],
+  subject: string,
+  message: string,
+  appLink?: string
+) => {
+  if (notificationSettings.emailEnabled) {
+    await emailService.sendEmail(users, subject, message);
+  }
+  if (notificationSettings.pushEnabled) {
+    await pushNotificationService.sendNotifications(users, message, appLink);
+  }
+};
+
 export const sendAnnouncementNotification = async (
   data: SendAnnouncementNotification
 ) => {
@@ -122,16 +154,11 @@ export const sendAnnouncementNotification = async (
   const subject = `Announcement - ${announcement.title}`;
   // const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
 
-  if (organization?.notificationSetting?.emailEnabled) {
-    await emailService.sendEmail(
+  if (organization?.notificationSetting) {
+    await sendOrganizationNotifications(
+      organization?.notificationSetting,
       users,
       subject,
-      announcement.description || ""
-    );
-  }
-  if (organization?.notificationSetting?.pushEnabled) {
-    await pushNotificationService.sendNotifications(
-      users,
       announcement.description || ""
     );
   }
@@ -150,11 +177,14 @@ export const sendAlertNotification = async (data: SendAlertNotifications) => {
   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
   const message = `Evacuation issued for ${group.name} \n message: ${evacuationEvent.message}`;
 
-  if (group?.notificationSetting?.emailEnabled) {
-    await emailService.sendEmail(users, subject, message, appLink);
-  }
-  if (group?.notificationSetting?.pushEnabled) {
-    await pushNotificationService.sendNotifications(users, message, appLink);
+  if (group?.notificationSetting) {
+    await sendGroupNotifications(
+      group?.notificationSetting,
+      users,
+      subject,
+      message,
+      appLink
+    );
   }
 };
 
@@ -174,11 +204,14 @@ export const sendAlertEndedNotification = async (
   const message = `Evacuation for ${group.name} has ended, it is now safe to return`;
   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
 
-  if (group?.notificationSetting?.emailEnabled) {
-    await emailService.sendEmail(users, subject, message);
-  }
-  if (group?.notificationSetting?.pushEnabled) {
-    await pushNotificationService.sendNotifications(users, message, appLink);
+  if (group?.notificationSetting) {
+    await sendGroupNotifications(
+      group?.notificationSetting,
+      users,
+      subject,
+      message,
+      appLink
+    );
   }
 };
 
@@ -211,12 +244,12 @@ const sendCompleteSignupNotification = async (
   organization: Organization
 ) => {
   const token = tokenService.create(user);
-  const signupLink = `${process.env.CLIENT_URL}/completeSignup?token=${token}`;
+  const signupLink = `http://${process.env.CLIENT_URL}/completeSignup?token=${token}`;
 
-  console.log(signupLink);
   await emailService.sendEmail(
     [user],
     "Complete Signup",
-    `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n ${signupLink}`
+    `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n`,
+    signupLink
   );
 };

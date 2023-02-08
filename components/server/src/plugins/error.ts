@@ -3,9 +3,6 @@ import {
   BaseContext,
   GraphQLRequestListener
 } from "apollo-server-plugin-base";
-import logger from "../config/logger";
-
-const log = logger("evacuationApp");
 
 export const GraphQLErrorsHandler: ApolloServerPlugin<BaseContext> = {
   async requestDidStart({
@@ -15,7 +12,7 @@ export const GraphQLErrorsHandler: ApolloServerPlugin<BaseContext> = {
       async didEncounterErrors({ errors }) {
         if (errors.length > 0) {
           errors.forEach((error) => {
-            log.error(error);
+            context.log.error(error);
           });
         }
       }
