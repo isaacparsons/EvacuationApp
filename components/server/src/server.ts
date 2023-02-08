@@ -30,7 +30,6 @@ interface InitialContext {
 
 const auth = async ({ req }) => {
   const log = logger("Kiwitinohk Communications App");
-  log.info("test");
   const prisma: PrismaClient = new PrismaClient();
   const result: InitialContext = { db: prisma, log };
   if (req.headers.authorization) {
