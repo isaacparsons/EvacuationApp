@@ -42,8 +42,7 @@ type Mutation {
     groupId: Int!
     groupNotificationSetting: GroupNotificationSettingInput!
   ): GroupNotificationSetting
-  inviteUsers(groupId: Int!, users: [InvitedGroupUser]): [GroupMember]
-  updateInvite(groupId: Int!, response: String!): GroupMember
+  addUsersToGroup(groupId: Int!, users: [AddGroupUser]): [GroupMember]
   updateGroupMember(userId: Int!, groupId: Int!, admin: Boolean!): GroupMember
   removeMembers(memberIds: [Int]): [GroupMember]
   createEvacuationEvent(groupId: Int!, msg: String!): EvacuationEvent
@@ -64,6 +63,7 @@ type Mutation {
   inviteToOrganization(
     organizationId: Int!
     users: [InvitedOrganizationUser]
+    groupIds: [Int]
   ): [OrganizationMember]
   updateOrgInvite(organizationId: Int!, status: String!): OrganizationMember
   removeFromOrganization(
@@ -173,9 +173,9 @@ type User {
   evacuationResponses: [EvacuationResponse]
 }
 
-input InvitedGroupUser {
+input AddGroupUser {
   admin: Boolean!
-  email: String!
+  userId: Int!
 }
 
 input InvitedOrganizationUser {

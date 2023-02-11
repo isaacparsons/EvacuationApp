@@ -19,6 +19,7 @@ import {
 } from "../services/OrganizationService";
 
 import { Context } from "../types";
+import { addUsersToGroups, updateGroupInvites } from "../services/GroupService";
 
 const OrganizationResolver = {
   Query: {
@@ -103,6 +104,12 @@ const OrganizationResolver = {
         db: context.db,
         ...args
       });
+      const userIds = members.map((member) => member.userId);
+      await addUsersToGroups({
+        db: context.db,
+        userIds,
+        groupIds: args.groupIds
+      });
       await sendCompleteSignupNotifications({ db: context.db, members });
       return members;
     },
@@ -112,12 +119,18 @@ const OrganizationResolver = {
       context: Context,
       info
     ): Promise<any> => {
-      const organization = await updateOrgInvite({
+      const organizationMember = await updateOrgInvite({
         db: context.db,
         ...args,
         userId: context.user.id
       });
-      return organization;
+      await updateGroupInvites({
+        db: context.db,
+        organizationId: args.organizationId,
+        response: args.status,
+        userId: context.user.id
+      });
+      return organizationMember;
     },
     removeFromOrganization: async (
       parent,

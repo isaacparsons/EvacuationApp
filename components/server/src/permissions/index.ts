@@ -25,8 +25,8 @@ export const permissions = shield(
         isAuthenticated,
         race(isGroupAdmin, isOrgAdmin)
       ),
-      inviteUsers: chain(isAuthenticated, or(isGroupAdmin, isOrgAdmin)),
-      updateInvite: isAuthenticated,
+      // inviteUsers: chain(isAuthenticated, or(isGroupAdmin, isOrgAdmin)),
+      // updateInvite: isAuthenticated,
       updateGroupMember: chain(isAuthenticated, isOrgAdmin),
       removeMembers: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       createEvacuationEvent: chain(

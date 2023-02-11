@@ -86,68 +86,61 @@ export const signup = async (data: SignupInput): Promise<Auth> => {
   if (existingUser && existingUser.accountCreated) {
     throw new Error("An account with this email/phone number already exists");
   }
-  let user;
-  if (existingUser && !existingUser.accountCreated) {
-    user = await db.user.update({
-      where: { email: emailLowercase },
-      data: {
-        phoneNumber,
-        passwordHash,
-        firstName: firstNameLowerCase,
-        lastName: lastNameLowerCase,
-        accountCreated: true
-      },
-      include: {
-        organizations: true,
-        groups: true
-      }
-    });
-  }
-  if (!existingUser) {
-    user = await db.user.create({
-      data: {
-        email: emailLowercase,
-        phoneNumber,
-        passwordHash,
-        firstName: firstNameLowerCase,
-        lastName: lastNameLowerCase,
-        accountCreated: true
-      },
-      include: {
-        organizations: true,
-        groups: true
-      }
-    });
-  }
-  const userWithoutPassword = exclude<User, "passwordHash">(
-    user,
-    "passwordHash"
-  );
-  return {
-    token: tokenService.create(user),
-    user
-  };
-};
 
-export const deleteUser = async (data: DeleteUserInput) => {
-  const { email, db } = data;
   try {
-    const user = await db.user.delete({
-      where: { email: email.toLowerCase() }
-    });
+    let user;
+    if (existingUser && !existingUser.accountCreated) {
+      user = await db.user.update({
+        where: { email: emailLowercase },
+        data: {
+          phoneNumber,
+          passwordHash,
+          firstName: firstNameLowerCase,
+          lastName: lastNameLowerCase,
+          accountCreated: true
+        }
+      });
+    }
+    if (!existingUser) {
+      user = await db.user.create({
+        data: {
+          email: emailLowercase,
+          phoneNumber,
+          passwordHash,
+          firstName: firstNameLowerCase,
+          lastName: lastNameLowerCase,
+          accountCreated: true
+        }
+      });
+    }
     const userWithoutPassword = exclude<User, "passwordHash">(
       user,
       "passwordHash"
     );
-    return user;
+    return {
+      token: tokenService.create(user),
+      user
+    };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2025") {
-        return null;
+      if (error.code === "P2002") {
+        throw new Error("An account with this phone number already exists");
       }
     }
     throw error;
   }
+};
+
+export const deleteUser = async (data: DeleteUserInput) => {
+  const { email, db } = data;
+  const user = await db.user.delete({
+    where: { email: email.toLowerCase() }
+  });
+  const userWithoutPassword = exclude<User, "passwordHash">(
+    user,
+    "passwordHash"
+  );
+  return user;
 };
 
 export const updateUser = async (data: UpdateUserInput) => {
@@ -166,18 +159,26 @@ export const updateUser = async (data: UpdateUserInput) => {
     const passwordHash = await bcrypt.hash(password, 10);
     updateParams.passwordHash = passwordHash;
   }
-
-  const updatedUser = await db.user.update({
-    where: {
-      id: user.id
-    },
-    data: updateParams
-  });
-  const userWithoutPassword = exclude<User, "passwordHash">(
-    updatedUser,
-    "passwordHash"
-  );
-  return userWithoutPassword;
+  try {
+    const updatedUser = await db.user.update({
+      where: {
+        id: user.id
+      },
+      data: updateParams
+    });
+    const userWithoutPassword = exclude<User, "passwordHash">(
+      updatedUser,
+      "passwordHash"
+    );
+    return userWithoutPassword;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        throw new Error("An account with this phone number already exists");
+      }
+    }
+    throw error;
+  }
 };
 
 export const resetPassword = async (data: ResetPasswordInput) => {

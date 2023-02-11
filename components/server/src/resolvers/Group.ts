@@ -1,13 +1,12 @@
 import { Group } from "@prisma/client";
 import {
+  addUsersToGroup,
   createGroup,
   // getGroupMembers,
   deleteGroup,
   getGroup,
-  inviteUsers,
   removeMembers,
-  updateGroupNotificationOptions,
-  updateInvite
+  updateGroupNotificationOptions
 } from "../services/GroupService";
 import {
   getGroupForUser,
@@ -66,8 +65,8 @@ const GroupResolver = {
       });
       return groupNotificationSetting;
     },
-    inviteUsers: async (parent, args, context, info) => {
-      return inviteUsers({
+    addUsersToGroup: async (parent, args, context, info) => {
+      return addUsersToGroup({
         ...args,
         db: context.db
       });
@@ -78,14 +77,6 @@ const GroupResolver = {
         db: context.db
       });
       return members;
-    },
-    updateInvite: async (parent, args, context, info) => {
-      const groupMember = await updateInvite({
-        ...args,
-        userId: context.user.id,
-        db: context.db
-      });
-      return groupMember;
     },
     updateGroupMember: async (parent, args, context, info) => {
       const groupMember = await updateGroupMember({

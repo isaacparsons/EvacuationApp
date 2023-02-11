@@ -41,21 +41,32 @@ interface UpdateGroupNotificationSettingInput {
   groupNotificationSetting: GroupNotificationSettingInput;
 }
 
-interface InvitedUsersInput {
+interface InviteUsersToGroups {
+  db: PrismaClient;
+  userIds: number[];
+  groupIds: number[];
+}
+
+interface AddUser {
+  userId: number;
+  admin: boolean;
+}
+
+interface AddUsersInput {
   db: PrismaClient;
   groupId: number;
   userId: number;
-  users: [InviteUser];
+  users: AddUser[];
 }
 
 interface RemoveMembersInput {
   db: PrismaClient;
-  memberIds: [number];
+  memberIds: number[];
 }
 
 interface UpdateInviteInput {
   db: PrismaClient;
-  groupId: number;
+  organizationId: number;
   userId: number;
   response: string;
 }
@@ -221,22 +232,48 @@ export const updateGroupNotificationOptions = async (
   return setting;
 };
 
-export const inviteUsers = async (
-  data: InvitedUsersInput
+export const addUsersToGroups = async (data: InviteUsersToGroups) => {
+  const { userIds, groupIds, db } = data;
+  await Promise.all(
+    groupIds.map(async (groupId) => {
+      await Promise.all(
+        userIds.map(async (userId) => {
+          await db.groupMember.create({
+            data: {
+              status: "pending",
+              admin: false,
+              group: {
+                connect: { id: groupId }
+              },
+              user: {
+                connect: {
+                  id: userId
+                }
+              }
+            }
+          });
+        })
+      );
+    })
+  );
+};
+
+export const addUsersToGroup = async (
+  data: AddUsersInput
 ): Promise<GroupMember[]> => {
   const { users, groupId, db } = data;
   const groupMembers = await Promise.all(
     users.map(async (user) => {
       const groupMember = await db.groupMember.create({
         data: {
-          status: "pending",
+          status: "accepted",
           admin: user.admin,
           group: {
             connect: { id: groupId }
           },
           user: {
             connect: {
-              email: user.email.toLowerCase()
+              id: user.userId
             }
           }
         },
@@ -247,35 +284,6 @@ export const inviteUsers = async (
   );
 
   return groupMembers;
-};
-
-export const updateInvite = async (
-  data: UpdateInviteInput
-): Promise<GroupMember> => {
-  const { groupId, userId, response, db } = data;
-  if (response === "declined") {
-    const groupMember = await db.groupMember.delete({
-      where: {
-        userId_groupId: {
-          userId,
-          groupId
-        }
-      }
-    });
-    return groupMember;
-  }
-  const groupMember = await db.groupMember.update({
-    where: {
-      userId_groupId: {
-        userId,
-        groupId
-      }
-    },
-    data: {
-      status: response
-    }
-  });
-  return groupMember;
 };
 
 export const updateGroupMember = async (data: UpdateGroupMemberInput) => {
@@ -314,6 +322,52 @@ export const removeMembers = async (data: RemoveMembersInput) => {
           }
         }
       }
+    })
+  );
+};
+
+export const updateGroupInvites = async (
+  data: UpdateInviteInput
+): Promise<GroupMember[]> => {
+  const { organizationId, userId, response, db } = data;
+  const _groupMembers = await db.groupMember.findMany({
+    where: {
+      userId
+    },
+    include: {
+      group: true
+    }
+  });
+  const groupMembers = _groupMembers.filter(
+    (member) => member.group.organizationId === organizationId
+  );
+  if (response === "declined") {
+    return await Promise.all(
+      groupMembers.map(async (member) => {
+        return await db.groupMember.delete({
+          where: {
+            userId_groupId: {
+              userId,
+              groupId: member.groupId
+            }
+          }
+        });
+      })
+    );
+  }
+  return await Promise.all(
+    groupMembers.map(async (member) => {
+      return await db.groupMember.update({
+        where: {
+          userId_groupId: {
+            userId,
+            groupId: member.groupId
+          }
+        },
+        data: {
+          status: response
+        }
+      });
     })
   );
 };
