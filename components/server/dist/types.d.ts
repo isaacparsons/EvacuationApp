@@ -1,8 +1,4 @@
-import { OrganizationMember, PrismaClient } from "@prisma/client";
-export interface Context {
-    db: PrismaClient;
-    user: User;
-}
+import { OrganizationMember } from "@prisma/client";
 export interface User {
     id: number;
     email: string;
@@ -54,8 +50,8 @@ export declare const SCOPE_GROUP_ADMIN = "GROUP_ADMIN";
 export declare const SCOPE_GROUP_MEMBER = "GROUP_MEMBER";
 export declare const SCOPE_ORG_ADMIN = "ORG_ADMIN";
 export declare const SCOPE_ORG_MEMBER = "ORG_MEMBER";
-export declare type SCOPES = typeof SCOPE_GROUP_ADMIN | typeof SCOPE_GROUP_MEMBER | typeof SCOPE_ORG_ADMIN | typeof SCOPE_ORG_MEMBER;
-export declare type UserWithoutPassword = Omit<User, "passwordHash">;
+export type SCOPES = typeof SCOPE_GROUP_ADMIN | typeof SCOPE_GROUP_MEMBER | typeof SCOPE_ORG_ADMIN | typeof SCOPE_ORG_MEMBER;
+export type UserWithoutPassword = Omit<User, "passwordHash">;
 export interface Auth {
     user: UserWithoutPassword;
     token: string;

@@ -11,7 +11,7 @@ export const getOrgMemberFromGroupId = async (
     }
   });
   if (!group) {
-    throw new Error("Group does not exist");
+    return new Error("Group does not exist");
   }
   const member = await db.organizationMember.findUnique({
     where: {

@@ -12,7 +12,7 @@ export const GraphQLErrorsHandler: ApolloServerPlugin<BaseContext> = {
       async didEncounterErrors({ errors }) {
         if (errors.length > 0) {
           errors.forEach((error) => {
-            context.log.error("Unhandled error", error);
+            context.log.error(error);
           });
         }
       }

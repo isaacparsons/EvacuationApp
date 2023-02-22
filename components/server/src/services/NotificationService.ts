@@ -11,27 +11,12 @@ import {
 import EmailService from "./EmailService";
 import PushNotificationService from "./PushNotificationService";
 import TokenService from "./TokenService";
-import { GroupNotificationSetting } from "../types";
+import { GroupNotificationSetting } from "../generated/graphql";
+import { Context } from "../server";
 
 interface SendAlertNotifications {
   db: PrismaClient;
   evacuationEvent: EvacuationEvent;
-}
-
-interface SendAnnouncementNotification {
-  db: PrismaClient;
-  announcement: Announcement;
-  groupIds?: number[];
-}
-
-interface SendCompleteSignupNotifications {
-  db: PrismaClient;
-  members: Array<
-    OrganizationMember & {
-      user: User;
-      organization: Organization;
-    }
-  >;
 }
 
 const emailService = new EmailService();
@@ -46,9 +31,6 @@ const getGroup = async (db: PrismaClient, groupId: number) => {
     include: {
       notificationSetting: true,
       members: {
-        where: {
-          status: "accepted"
-        },
         include: {
           user: true
         }
@@ -76,10 +58,7 @@ const getOrganization = async (db: PrismaClient, organizationId: number) => {
   });
 };
 
-const getGroupMembersByGroupIds = async (
-  db: PrismaClient,
-  groupIds: number[]
-) => {
+const getGroupMembersByGroupIds = async (db: PrismaClient, groupIds: number[]) => {
   const groups = await Promise.all(
     groupIds.map(async (groupId) => {
       return db.group.findUnique({
@@ -88,9 +67,6 @@ const getGroupMembersByGroupIds = async (
         },
         include: {
           members: {
-            where: {
-              status: "accepted"
-            },
             include: {
               user: true
             }
@@ -136,9 +112,11 @@ const sendGroupNotifications = async (
   }
 };
 
-export const sendAnnouncementNotification = async (
-  data: SendAnnouncementNotification
-) => {
+export const sendAnnouncementNotification = async (data: {
+  db: PrismaClient;
+  announcement: Announcement;
+  groupIds?: number[] | null;
+}) => {
   const { db, announcement, groupIds } = data;
   const organization = await getOrganization(db, announcement.organizationId);
   let users: User[] = [];
@@ -178,19 +156,11 @@ export const sendAlertNotification = async (data: SendAlertNotifications) => {
   const message = `Evacuation issued for ${group.name} \n message: ${evacuationEvent.message}`;
 
   if (group?.notificationSetting) {
-    await sendGroupNotifications(
-      group?.notificationSetting,
-      users,
-      subject,
-      message,
-      appLink
-    );
+    await sendGroupNotifications(group?.notificationSetting, users, subject, message, appLink);
   }
 };
 
-export const sendAlertEndedNotification = async (
-  data: SendAlertNotifications
-) => {
+export const sendAlertEndedNotification = async (data: SendAlertNotifications) => {
   const { db, evacuationEvent } = data;
 
   const group = await getGroup(db, evacuationEvent.groupId);
@@ -205,13 +175,7 @@ export const sendAlertEndedNotification = async (
   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
 
   if (group?.notificationSetting) {
-    await sendGroupNotifications(
-      group?.notificationSetting,
-      users,
-      subject,
-      message,
-      appLink
-    );
+    await sendGroupNotifications(group?.notificationSetting, users, subject, message, appLink);
   }
 };
 
@@ -225,24 +189,39 @@ export const sendPasswordResetNotification = async (user: User) => {
   );
 };
 
-export const sendCompleteSignupNotifications = async (
-  data: SendCompleteSignupNotifications
-) => {
-  const { db, members } = data;
-  const membersToEmail = members.filter(
-    (member) => !member.user.accountCreated
-  );
+export const sendCompleteSignupNotifications = async (data: {
+  context: Context;
+  organizationId: number;
+  members: (OrganizationMember & {
+    user: User;
+  })[];
+}) => {
+  const { members, organizationId, context } = data;
+
+  const organization = await context.db.organization.findUnique({
+    where: {
+      id: organizationId
+    }
+  });
+
+  if (!organization) {
+    throw new Error(`Organization with id: ${organizationId} does not exist`);
+  }
+
   await Promise.all(
-    membersToEmail.map(async (member) => {
-      await sendCompleteSignupNotification(member.user, member.organization);
+    members.map(async (member) => {
+      try {
+        await sendCompleteSignupNotification(member.user, organization);
+      } catch (error) {
+        context.log.error(
+          `Failed to send complete signup email to user with email: ${member.user.email}`
+        );
+      }
     })
   );
 };
 
-const sendCompleteSignupNotification = async (
-  user: User,
-  organization: Organization
-) => {
+const sendCompleteSignupNotification = async (user: User, organization: Organization) => {
   const token = tokenService.create(user);
   const signupLink = `http://${process.env.CLIENT_URL}/completeSignup?token=${token}`;
 

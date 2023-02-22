@@ -1,3 +1,4 @@
+import { Resolvers } from "../generated/graphql";
 import {
   getInProgressEvacuationEvents,
   getEvacuationEvents
@@ -8,33 +9,27 @@ import {
   getEvacuationEvent,
   updateEvent
 } from "../services/EvacuationEventService";
-import {
-  sendAlertEndedNotification,
-  sendAlertNotification
-} from "../services/NotificationService";
+import { sendAlertEndedNotification, sendAlertNotification } from "../services/NotificationService";
 
-// const evacuationEventService = new EvacuationEventService();
-
-const EvacuationEventResolver = {
+const EvacuationEventResolver: Resolvers = {
   Query: {
     getEvacuationEvents: async (parent, args, context, info) => {
       const evacuationEvents = await getEvacuationEvents({
-        db: context.db,
+        context,
         ...args
       });
       return evacuationEvents;
     },
     getEvacuationEvent: async (parent, args, context, info) => {
       const evacuationEvent = await getEvacuationEvent({
-        db: context.db,
+        context,
         ...args
       });
       return evacuationEvent;
     },
     getInProgressEvacuationEvents: async (parent, args, context, info) => {
       const evacuationEvents = await getInProgressEvacuationEvents({
-        db: context.db,
-        userId: context.user.id
+        context
       });
       return evacuationEvents;
     }
@@ -42,8 +37,7 @@ const EvacuationEventResolver = {
   Mutation: {
     createEvacuationEvent: async (parent, args, context, info) => {
       const evacuationEvent = await createEvent({
-        db: context.db,
-        userId: context.user.id,
+        context,
         ...args
       });
       await sendAlertNotification({
@@ -55,7 +49,7 @@ const EvacuationEventResolver = {
     },
     updateEvacuationEvent: async (parent, args, context, info) => {
       const evacuationEvent = await updateEvent({
-        db: context.db,
+        context,
         ...args
       });
       if (evacuationEvent.status === "ended") {
@@ -65,9 +59,8 @@ const EvacuationEventResolver = {
     },
     createEvacuationEventResponse: async (parent, args, context, info) => {
       const evacuationResponse = await createEventResponse({
-        db: context.db,
-        ...args,
-        userId: context.user.id
+        context,
+        ...args
       });
       return evacuationResponse;
     }

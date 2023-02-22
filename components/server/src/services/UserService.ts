@@ -1,54 +1,16 @@
-import { Prisma, PrismaClient, User } from "@prisma/client";
+import { Prisma, User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { Auth, UserWithoutPassword } from "../types";
 import { exclude } from "../util/db";
 import TokenService from "./TokenService";
-
+import { Context } from "../server";
+import { RequestError } from "../util/errors";
+import { Auth } from "../generated/graphql";
 const tokenService = new TokenService();
 
-interface SignupInput {
-  db: PrismaClient;
-  email: string;
-  password: string;
-  phoneNumber: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface LoginInput {
-  db: PrismaClient;
-  email: string;
-  password: string;
-}
-
-interface DeleteUserInput {
-  db: PrismaClient;
-  email: string;
-}
-
-interface UpdateUserInput {
-  db: PrismaClient;
-  user: User;
-  phoneNumber?: string;
-  password?: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-interface ResetPasswordInput {
-  db: PrismaClient;
-  email: string;
-}
-
-interface GetJoinedEntitiesInput {
-  db: PrismaClient;
-  userId: number;
-}
-
-export const login = async (data: LoginInput) => {
-  const { password, email, db } = data;
+export const login = async (data: { email: string; password: string; context: Context }) => {
+  const { password, email, context } = data;
   const emailLowercase = email.toLowerCase();
-  const user = await db.user.findUnique({
+  const user = await context.db.user.findUnique({
     where: { email: emailLowercase },
     include: {
       organizations: true,
@@ -56,41 +18,45 @@ export const login = async (data: LoginInput) => {
     }
   });
   if (!user) {
-    throw new Error(`No user found with email: ${email}`);
+    throw new RequestError(`No user found with email: ${email}`);
   }
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
-    throw new Error("Invalid password");
+    throw new RequestError("Invalid password");
   }
-  const userWithoutPassword = exclude<User, "passwordHash">(
-    user,
-    "passwordHash"
-  );
+  const userWithoutPassword = exclude<User, "passwordHash">(user, "passwordHash");
   return {
     token: tokenService.create(user),
     user
   };
 };
 
-export const signup = async (data: SignupInput): Promise<Auth> => {
-  const { password, email, phoneNumber, firstName, lastName, db } = data;
+export const signup = async (data: {
+  context: Context;
+  email: string;
+  password: string;
+  phoneNumber: string;
+  firstName: string;
+  lastName: string;
+}): Promise<Auth> => {
+  const { password, email, phoneNumber, firstName, lastName, context } = data;
   const passwordHash = await bcrypt.hash(password, 10);
   const emailLowercase = email.toLowerCase();
   const firstNameLowerCase = firstName.toLowerCase();
   const lastNameLowerCase = lastName.toLowerCase();
-  const existingUser = await db.user.findUnique({
+  const existingUser = await context.db.user.findUnique({
     where: {
       email: emailLowercase
     }
   });
   if (existingUser && existingUser.accountCreated) {
-    throw new Error("An account with this email/phone number already exists");
+    throw new RequestError("An account with this email/phone number already exists");
   }
 
   try {
     let user;
     if (existingUser && !existingUser.accountCreated) {
-      user = await db.user.update({
+      user = await context.db.user.update({
         where: { email: emailLowercase },
         data: {
           phoneNumber,
@@ -102,7 +68,7 @@ export const signup = async (data: SignupInput): Promise<Auth> => {
       });
     }
     if (!existingUser) {
-      user = await db.user.create({
+      user = await context.db.user.create({
         data: {
           email: emailLowercase,
           phoneNumber,
@@ -113,10 +79,7 @@ export const signup = async (data: SignupInput): Promise<Auth> => {
         }
       });
     }
-    const userWithoutPassword = exclude<User, "passwordHash">(
-      user,
-      "passwordHash"
-    );
+    const userWithoutPassword = exclude<User, "passwordHash">(user, "passwordHash");
     return {
       token: tokenService.create(user),
       user
@@ -124,29 +87,32 @@ export const signup = async (data: SignupInput): Promise<Auth> => {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
-        throw new Error("An account with this phone number already exists");
+        throw new RequestError("An account with this phone number already exists");
       }
     }
     throw error;
   }
 };
 
-export const deleteUser = async (data: DeleteUserInput) => {
-  const { email, db } = data;
-  const user = await db.user.delete({
-    where: { email: email.toLowerCase() }
+export const deleteUser = async (data: { context: Context }) => {
+  const { context } = data;
+  const user = await context.db.user.delete({
+    where: { email: context.user!.email.toLowerCase() }
   });
-  const userWithoutPassword = exclude<User, "passwordHash">(
-    user,
-    "passwordHash"
-  );
+  const userWithoutPassword = exclude<User, "passwordHash">(user, "passwordHash");
   return user;
 };
 
-export const updateUser = async (data: UpdateUserInput) => {
-  const { user, phoneNumber, password, firstName, lastName, db } = data;
+export const updateUser = async (data: {
+  context: Context;
+  phoneNumber?: string | null;
+  password?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}) => {
+  const { phoneNumber, password, firstName, lastName, context } = data;
   const accountCreated =
-    (password || user.passwordHash) && (phoneNumber || user.phoneNumber)
+    (password || context.user!.passwordHash) && (phoneNumber || context.user!.phoneNumber)
       ? true
       : false;
   const updateParams: Partial<User> = {
@@ -160,48 +126,42 @@ export const updateUser = async (data: UpdateUserInput) => {
     updateParams.passwordHash = passwordHash;
   }
   try {
-    const updatedUser = await db.user.update({
+    const updatedUser = await context.db.user.update({
       where: {
-        id: user.id
+        id: context.user!.id
       },
       data: updateParams
     });
-    const userWithoutPassword = exclude<User, "passwordHash">(
-      updatedUser,
-      "passwordHash"
-    );
+    const userWithoutPassword = exclude<User, "passwordHash">(updatedUser, "passwordHash");
     return userWithoutPassword;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
-        throw new Error("An account with this phone number already exists");
+        throw new RequestError("An account with this phone number already exists");
       }
     }
     throw error;
   }
 };
 
-export const resetPassword = async (data: ResetPasswordInput) => {
-  const { db, email } = data;
-  const user = await db.user.findUnique({
+export const resetPassword = async (data: { context: Context; email: string }) => {
+  const { context, email } = data;
+  const user = await context.db.user.findUnique({
     where: { email: email.toLowerCase() }
   });
   if (!user) {
-    throw new Error(`No user found for email: ${email}`);
+    throw new RequestError(`No user found for email: ${email}`);
   }
-  const userWithoutPassword = exclude<User, "passwordHash">(
-    user,
-    "passwordHash"
-  );
+  const userWithoutPassword = exclude<User, "passwordHash">(user, "passwordHash");
   return user;
 };
 
-export const getJoinedEntities = async (data: GetJoinedEntitiesInput) => {
-  const { db, userId } = data;
+export const getJoinedEntities = async (data: { context: Context }) => {
+  const { context } = data;
 
-  const user = await db.user.findUnique({
+  const user = await context.db.user.findUnique({
     where: {
-      id: userId
+      id: context.user!.id
     },
     include: {
       groups: {

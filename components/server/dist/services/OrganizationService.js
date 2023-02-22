@@ -1,12 +1,16 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteOrganizationAnnouncement = exports.createOrganizationAnnouncement = exports.removeFromOrganization = exports.updateOrgInvite = exports.inviteToOrganization = exports.updateOrganizationNotificationOptions = exports.deleteOrganization = exports.createOrganization = exports.getOrganizationForUser = exports.getOrganization = exports.getOrganizationsForUser = void 0;
-const client_1 = require("@prisma/client");
+exports.getAnnouncements = exports.deleteOrganizationAnnouncement = exports.createOrganizationAnnouncement = exports.removeFromOrganization = exports.updateOrgInvite = exports.inviteToOrganization = exports.updateOrganizationNotificationOptions = exports.deleteOrganization = exports.createOrganization = exports.getOrganizationForUser = exports.getOrganizationMembers = exports.getOrganization = exports.getOrganizationsForUser = void 0;
+const doesAlreadyExistError_1 = __importDefault(require("../util/doesAlreadyExistError"));
+const errors_1 = require("../util/errors");
 const getOrganizationsForUser = async (data) => {
-    const { userId, db } = data;
-    const organizations = await db.organizationMember.findMany({
+    const { context } = data;
+    const organizations = await context.db.organizationMember.findMany({
         where: {
-            userId
+            userId: context.user.id
         },
         include: {
             organization: {
@@ -20,8 +24,8 @@ const getOrganizationsForUser = async (data) => {
 };
 exports.getOrganizationsForUser = getOrganizationsForUser;
 const getOrganization = async (data) => {
-    const { organizationId, db } = data;
-    const organization = await db.organization.findUnique({
+    const { organizationId, context } = data;
+    const organization = await context.db.organization.findUnique({
         where: {
             id: organizationId
         },
@@ -36,12 +40,36 @@ const getOrganization = async (data) => {
             announcements: true
         }
     });
+    if (!organization) {
+        throw new errors_1.RequestError(`Organization does not exist with id: ${organizationId}`);
+    }
     return organization;
 };
 exports.getOrganization = getOrganization;
+const getOrganizationMembers = async (data) => {
+    const { organizationId, context, cursor } = data;
+    const organizationMembers = await context.db.organizationMember.findMany(Object.assign(Object.assign(Object.assign({}, (cursor && { skip: 1 })), (cursor && {
+        cursor: {
+            id: cursor
+        }
+    })), { take: 5, orderBy: {
+            id: "asc"
+        }, where: {
+            organizationId
+        }, include: {
+            user: true
+        } }));
+    return {
+        data: organizationMembers,
+        cursor: organizationMembers.length > 0
+            ? organizationMembers[organizationMembers.length - 1].id
+            : cursor
+    };
+};
+exports.getOrganizationMembers = getOrganizationMembers;
 const getOrganizationForUser = async (data) => {
-    const { db, userId, organizationId } = data;
-    const organization = await db.organization.findUnique({
+    const { context, organizationId } = data;
+    const organization = await context.db.organization.findUnique({
         where: {
             id: organizationId
         },
@@ -55,9 +83,12 @@ const getOrganizationForUser = async (data) => {
             announcements: true
         }
     });
-    const allGroups = await db.user.findUnique({
+    if (!organization) {
+        throw new errors_1.RequestError(`Organization with id: ${organizationId} does not exist`);
+    }
+    const allGroups = await context.db.user.findUnique({
         where: {
-            id: userId
+            id: context.user.id
         },
         include: {
             groups: {
@@ -74,8 +105,8 @@ const getOrganizationForUser = async (data) => {
 };
 exports.getOrganizationForUser = getOrganizationForUser;
 const createOrganization = async (data) => {
-    const { name, userId, db, organizationNotificationSetting } = data;
-    const organization = await db.organization.create({
+    const { name, context, organizationNotificationSetting } = data;
+    const organization = await context.db.organization.create({
         data: {
             name,
             members: {
@@ -83,7 +114,7 @@ const createOrganization = async (data) => {
                     status: "accepted",
                     admin: true,
                     user: {
-                        connect: { id: userId }
+                        connect: { id: context.user.id }
                     }
                 }
             },
@@ -105,8 +136,8 @@ const createOrganization = async (data) => {
 };
 exports.createOrganization = createOrganization;
 const deleteOrganization = async (data) => {
-    const { organizationId, db } = data;
-    const organization = await db.organization.delete({
+    const { organizationId, context } = data;
+    const organization = await context.db.organization.delete({
         where: {
             id: organizationId
         }
@@ -115,8 +146,8 @@ const deleteOrganization = async (data) => {
 };
 exports.deleteOrganization = deleteOrganization;
 const updateOrganizationNotificationOptions = async (data) => {
-    const { organizationId, organizationNotificationSetting, db } = data;
-    const setting = await db.organizationNotificationSetting.update({
+    const { organizationId, organizationNotificationSetting, context } = data;
+    const setting = await context.db.organizationNotificationSetting.update({
         where: {
             organizationId
         },
@@ -126,51 +157,64 @@ const updateOrganizationNotificationOptions = async (data) => {
 };
 exports.updateOrganizationNotificationOptions = updateOrganizationNotificationOptions;
 const inviteToOrganization = async (data) => {
-    const { users, organizationId, db } = data;
-    const orgMembers = await Promise.all(users.map(async (user) => {
-        const orgMember = await db.organizationMember.create({
-            data: {
-                status: "pending",
-                admin: user.admin,
-                organization: {
-                    connect: { id: organizationId }
-                },
-                user: {
-                    connectOrCreate: {
-                        where: {
-                            email: user.email
-                        },
-                        create: {
-                            email: user.email,
-                            accountCreated: false
+    const { users, organizationId, context } = data;
+    const succeeded = [];
+    const failed = [];
+    await Promise.all(users.map(async (user) => {
+        try {
+            const member = await context.db.organizationMember.create({
+                data: {
+                    status: "pending",
+                    admin: user.admin,
+                    organization: {
+                        connect: { id: organizationId }
+                    },
+                    user: {
+                        connectOrCreate: {
+                            where: {
+                                email: user.email.toLowerCase()
+                            },
+                            create: {
+                                email: user.email.toLowerCase(),
+                                accountCreated: false
+                            }
                         }
                     }
-                }
-            },
-            include: { user: true, organization: true }
-        });
-        return orgMember;
+                },
+                include: { user: true }
+            });
+            succeeded.push(member);
+        }
+        catch (error) {
+            if (!(0, doesAlreadyExistError_1.default)(error)) {
+                context.log.error(`Failed to add member with email: ${user.email} to organization: ${organizationId}`, error);
+                failed.push(user.email);
+            }
+        }
     }));
-    return orgMembers;
+    return {
+        succeeded,
+        failed
+    };
 };
 exports.inviteToOrganization = inviteToOrganization;
 const updateOrgInvite = async (data) => {
-    const { organizationId, status, userId, db } = data;
+    const { organizationId, status, context } = data;
     if (status === "declined") {
-        const orgMember = await db.organizationMember.delete({
+        const orgMember = await context.db.organizationMember.delete({
             where: {
                 userId_organizationId: {
-                    userId,
+                    userId: context.user.id,
                     organizationId
                 }
             }
         });
         return orgMember;
     }
-    const orgMember = await db.organizationMember.update({
+    const orgMember = await context.db.organizationMember.update({
         where: {
             userId_organizationId: {
-                userId,
+                userId: context.user.id,
                 organizationId
             }
         },
@@ -182,10 +226,12 @@ const updateOrgInvite = async (data) => {
 };
 exports.updateOrgInvite = updateOrgInvite;
 const removeFromOrganization = async (data) => {
-    const { userIds, organizationId, db } = data;
-    return Promise.all(userIds.map(async (userId) => {
+    const { userIds, organizationId, context } = data;
+    const succeeded = [];
+    const failed = [];
+    await Promise.all(userIds.map(async (userId) => {
         try {
-            return await db.organizationMember.delete({
+            const member = await context.db.organizationMember.delete({
                 where: {
                     userId_organizationId: {
                         userId,
@@ -196,25 +242,27 @@ const removeFromOrganization = async (data) => {
                     user: true
                 }
             });
+            succeeded.push(member);
         }
         catch (error) {
-            if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-                if (error.code === "P2025") {
-                    return null;
-                }
-            }
+            context.log.error(`Failed to remove member with userId: ${userId} from organization: ${organizationId}`, error);
+            failed.push(userId);
         }
     }));
+    return {
+        succeeded,
+        failed
+    };
 };
 exports.removeFromOrganization = removeFromOrganization;
 const createOrganizationAnnouncement = async (data) => {
-    const { title, description, userId, organizationId, db } = data;
-    const announcement = await db.announcement.create({
+    const { title, description, organizationId, context } = data;
+    const announcement = await context.db.announcement.create({
         data: {
             title,
             description,
             date: new Date().toISOString(),
-            createdBy: userId,
+            createdBy: context.user.id,
             organizationId
         }
     });
@@ -222,8 +270,8 @@ const createOrganizationAnnouncement = async (data) => {
 };
 exports.createOrganizationAnnouncement = createOrganizationAnnouncement;
 const deleteOrganizationAnnouncement = async (data) => {
-    const { announcementId, db } = data;
-    const announcement = await db.announcement.delete({
+    const { announcementId, context } = data;
+    const announcement = await context.db.announcement.delete({
         where: {
             id: announcementId
         }
@@ -231,4 +279,21 @@ const deleteOrganizationAnnouncement = async (data) => {
     return announcement;
 };
 exports.deleteOrganizationAnnouncement = deleteOrganizationAnnouncement;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiT3JnYW5pemF0aW9uU2VydmljZS5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9zZXJ2aWNlcy9Pcmdhbml6YXRpb25TZXJ2aWNlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7OztBQUFBLDJDQUFzRDtBQXdGL0MsTUFBTSx1QkFBdUIsR0FBRyxLQUFLLEVBQUUsSUFBMkIsRUFBRSxFQUFFO0lBQzNFLE1BQU0sRUFBRSxNQUFNLEVBQUUsRUFBRSxFQUFFLEdBQUcsSUFBSSxDQUFDO0lBQzVCLE1BQU0sYUFBYSxHQUFHLE1BQU0sRUFBRSxDQUFDLGtCQUFrQixDQUFDLFFBQVEsQ0FBQztRQUN6RCxLQUFLLEVBQUU7WUFDTCxNQUFNO1NBQ1A7UUFDRCxPQUFPLEVBQUU7WUFDUCxZQUFZLEVBQUU7Z0JBQ1osT0FBTyxFQUFFO29CQUNQLE9BQU8sRUFBRSxJQUFJO2lCQUNkO2FBQ0Y7U0FDRjtLQUNGLENBQUMsQ0FBQztJQUVILE9BQU8sYUFBYSxDQUFDO0FBQ3ZCLENBQUMsQ0FBQztBQWhCVyxRQUFBLHVCQUF1QiwyQkFnQmxDO0FBRUssTUFBTSxlQUFlLEdBQUcsS0FBSyxFQUFFLElBQTBCLEVBQUUsRUFBRTtJQUNsRSxNQUFNLEVBQUUsY0FBYyxFQUFFLEVBQUUsRUFBRSxHQUFHLElBQUksQ0FBQztJQUNwQyxNQUFNLFlBQVksR0FBRyxNQUFNLEVBQUUsQ0FBQyxZQUFZLENBQUMsVUFBVSxDQUFDO1FBQ3BELEtBQUssRUFBRTtZQUNMLEVBQUUsRUFBRSxjQUFjO1NBQ25CO1FBQ0QsT0FBTyxFQUFFO1lBQ1AsTUFBTSxFQUFFLElBQUk7WUFDWixPQUFPLEVBQUU7Z0JBQ1AsT0FBTyxFQUFFO29CQUNQLElBQUksRUFBRSxJQUFJO2lCQUNYO2FBQ0Y7WUFDRCxtQkFBbUIsRUFBRSxJQUFJO1lBQ3pCLGFBQWEsRUFBRSxJQUFJO1NBQ3BCO0tBQ0YsQ0FBQyxDQUFDO0lBQ0gsT0FBTyxZQUFZLENBQUM7QUFDdEIsQ0FBQyxDQUFDO0FB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
+const getAnnouncements = async (data) => {
+    const { organizationId, context, cursor } = data;
+    const announcements = await context.db.announcement.findMany(Object.assign(Object.assign(Object.assign({}, (cursor && { skip: 1 })), (cursor && {
+        cursor: {
+            id: cursor
+        }
+    })), { take: 5, orderBy: {
+            id: "asc"
+        }, where: {
+            organizationId
+        } }));
+    return {
+        data: announcements,
+        cursor: announcements.length > 0 ? announcements[announcements.length - 1].id : cursor
+    };
+};
+exports.getAnnouncements = getAnnouncements;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiT3JnYW5pemF0aW9uU2VydmljZS5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9zZXJ2aWNlcy9Pcmdhbml6YXRpb25TZXJ2aWNlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7OztBQUVBLDBGQUFrRTtBQUNsRSwyQ0FBOEM7QUFNdkMsTUFBTSx1QkFBdUIsR0FBRyxLQUFLLEVBQUUsSUFBMEIsRUFBRSxFQUFFO0lBQzFFLE1BQU0sRUFBRSxPQUFPLEVBQUUsR0FBRyxJQUFJLENBQUM7SUFDekIsTUFBTSxhQUFhLEdBQUcsTUFBTSxPQUFPLENBQUMsRUFBRSxDQUFDLGtCQUFrQixDQUFDLFFBQVEsQ0FBQztRQUNqRSxLQUFLLEVBQUU7WUFDTCxNQUFNLEVBQUUsT0FBTyxDQUFDLElBQUssQ0FBQyxFQUFFO1NBQ3pCO1FBQ0QsT0FBTyxFQUFFO1lBQ1AsWUFBWSxFQUFFO2dCQUNaLE9BQU8sRUFBRTtvQkFDUCxPQUFPLEVBQUUsSUFBSTtpQkFDZDthQUNGO1NBQ0Y7S0FDRixDQUFDLENBQUM7SUFFSCxPQUFPLGFBQWEsQ0FBQztBQUN2QixDQUFDLENBQUM7QUFoQlcsUUFBQSx1QkFBdUIsMkJBZ0JsQztBQUVLLE1BQU0sZUFBZSxHQUFHLEtBQUssRUFBRSxJQUFrRCxFQUFFLEVBQUU7SUFDMUYsTUFBTSxFQUFFLGNBQWMsRUFBRSxPQUFPLEVBQUUsR0FBRyxJQUFJLENBQUM7SUFDekMsTUFBTSxZQUFZLEdBQUcsTUFBTSxPQUFPLENBQUMsRUFBRSxDQUFDLFlBQVksQ0FBQyxVQUFVLENBQUM7UUFDNUQsS0FBSyxFQUFFO1lBQ0wsRUFBRSxFQUFFLGNBQWM7U0FDbkI7UUFDRCxPQUFPLEVBQUU7WUFDUCxNQUFNLEVBQUUsSUFBSTtZQUNaLE9BQU8sRUFBRTtnQkFDUCxPQUFPLEVBQUU7b0JBQ1AsSUFBSSxFQUFFLElBQUk7aUJBQ1g7YUFDRjtZQUNELG1CQUFtQixFQUFFLElBQUk7WUFDekIsYUFBYSxFQUFFLElBQUk7U0FD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

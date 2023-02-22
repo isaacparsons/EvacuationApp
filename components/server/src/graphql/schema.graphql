@@ -1,82 +1,68 @@
 type Query {
-  getOrganizations: [OrganizationMember]
-  getOrganization(organizationId: Int!): Organization
-  getOrganizationForUser(organizationId: Int!): UserOrganization
-  getOrganizationMembers(
-    organizationId: Int!
-    cursor: Int
-  ): GetOrganizationMembers
-  getAnnouncements(organizationId: Int!, cursor: Int): GetAnnouncements
-  getGroup(groupId: Int!): Group
-  getGroupForUser(groupId: Int!): UserGroup
-  getGroupMembers(groupId: Int!, cursor: Int): GetGroupMembers
-  getEvacuationEvents(groupId: Int!, cursor: Int): GetEvacuationEvents
-  getEvacuationEvent(evacuationId: Int!): EvacuationEvent
-  getInProgressEvacuationEvents: [EvacuationEvent]
+  getOrganizations: [OrganizationMember!]!
+  getOrganization(organizationId: Int!): Organization!
+  getOrganizationForUser(organizationId: Int!): UserOrganization!
+  getOrganizationMembers(organizationId: Int!, cursor: Int): GetOrganizationMembers!
+  getAnnouncements(organizationId: Int!, cursor: Int): GetAnnouncements!
+  getGroup(groupId: Int!): Group!
+  getGroupForUser(groupId: Int!): UserGroup!
+  getGroupMembers(groupId: Int!, cursor: Int): GetGroupMembers!
+  getEvacuationEvents(groupId: Int!, cursor: Int): GetEvacuationEvents!
+  getEvacuationEvent(evacuationId: Int!): EvacuationEvent!
+  getInProgressEvacuationEvents: [EvacuationEvent!]!
   getJoinedEntities: User
 }
 type Mutation {
-  resetPassword(email: String!): User
-  login(email: String!, password: String!): Auth
+  resetPassword(email: String!): User!
+  login(email: String!, password: String!): Auth!
   signup(
     email: String!
     phoneNumber: String!
     password: String!
     firstName: String!
     lastName: String!
-  ): Auth
-  deleteUser: User
-  updateUser(
-    phoneNumber: String
-    password: String
-    firstName: String
-    lastName: String
-  ): User
+  ): Auth!
+  deleteUser: User!
+  updateUser(phoneNumber: String, password: String, firstName: String, lastName: String): User!
   createGroup(
     organizationId: Int!
     name: String!
     groupNotificationSetting: GroupNotificationSettingInput!
-  ): Group
-  deleteGroup(groupId: Int!): Group
+  ): Group!
+  deleteGroup(groupId: Int!): Group!
   updateGroupNotificationOptions(
     groupId: Int!
     groupNotificationSetting: GroupNotificationSettingInput!
-  ): GroupNotificationSetting
-  addUsersToGroup(groupId: Int!, users: [AddGroupUser]): [GroupMember]
-  updateGroupMember(userId: Int!, groupId: Int!, admin: Boolean!): GroupMember
-  removeMembers(memberIds: [Int]): [GroupMember]
-  createEvacuationEvent(groupId: Int!, msg: String!): EvacuationEvent
-  updateEvacuationEvent(evacuationId: Int!, status: String!): EvacuationEvent
-  createEvacuationEventResponse(
-    evacuationId: Int!
-    response: String!
-  ): EvacuationResponse
+  ): GroupNotificationSetting!
+  addUsersToGroup(groupId: Int!, users: [AddGroupUser!]!): [GroupMember!]!
+  updateGroupMember(userId: Int!, groupId: Int!, admin: Boolean!): GroupMember!
+  removeMembers(groupId: Int!, userIds: [Int!]!): [GroupMember!]!
+  createEvacuationEvent(groupId: Int!, msg: String!): EvacuationEvent!
+  updateEvacuationEvent(evacuationId: Int!, status: String!): EvacuationEvent!
+  createEvacuationEventResponse(evacuationId: Int!, response: String!): EvacuationResponse!
   createOrganization(
     name: String!
     organizationNotificationSetting: OrganizationNotificationSettingInput!
-  ): Organization
-  deleteOrganization(organizationId: Int!): Organization
+  ): Organization!
+  deleteOrganization(organizationId: Int!): Organization!
   updateOrganizationNotificationOptions(
     organizationId: Int!
     organizationNotificationSetting: OrganizationNotificationSettingInput!
-  ): OrganizationNotificationSetting
+  ): OrganizationNotificationSetting!
   inviteToOrganization(
     organizationId: Int!
-    users: [InvitedOrganizationUser]
-    groupIds: [Int]
-  ): [OrganizationMember]
-  updateOrgInvite(organizationId: Int!, status: String!): OrganizationMember
-  removeFromOrganization(
-    organizationId: Int!
-    userIds: [Int]
-  ): [OrganizationMember]
+    users: [InvitedOrganizationUser!]!
+    groupIds: [Int!]
+  ): [OrganizationMember!]
+  updateOrgInvite(organizationId: Int!, status: String!): OrganizationMember!
+  removeFromOrganization(organizationId: Int!, userIds: [Int!]!): [OrganizationMember!]
   createOrganizationAnnouncement(
     organizationId: Int!
     title: String!
     description: String
-    groupIds: [Int]
-  ): Announcement
-  deleteOrganizationAnnouncement(announcementId: Int!): Announcement
+    groupIds: [Int!]
+  ): Announcement!
+  deleteOrganizationAnnouncement(announcementId: Int!): Announcement!
 }
 
 type Auth {
@@ -85,22 +71,22 @@ type Auth {
 }
 
 type GetOrganizationMembers {
-  data: [OrganizationMember]
+  data: [OrganizationMember!]!
   cursor: Int
 }
 
 type GetAnnouncements {
-  data: [Announcement]
+  data: [Announcement!]!
   cursor: Int
 }
 
 type GetGroupMembers {
-  data: [GroupMember]
+  data: [GroupMember!]!
   cursor: Int
 }
 
 type GetEvacuationEvents {
-  data: [EvacuationEvent]
+  data: [EvacuationEvent!]!
   cursor: Int
 }
 
@@ -108,9 +94,9 @@ type UserOrganization {
   id: Int!
   name: String!
   notificationSetting: OrganizationNotificationSetting
-  members: [OrganizationMember]
-  announcements: [Announcement]
-  groups: [GroupMember]
+  members: [OrganizationMember!]
+  announcements: [Announcement!]
+  groups: [GroupMember!]
 }
 
 type Organization {
@@ -118,9 +104,9 @@ type Organization {
   name: String!
   notificationSetting: OrganizationNotificationSetting
 
-  members: [OrganizationMember]
-  announcements: [Announcement]
-  groups: [Group]
+  members: [OrganizationMember!]
+  announcements: [Announcement!]
+  groups: [Group!]
 }
 
 type OrganizationNotificationSetting {
@@ -168,9 +154,9 @@ type User {
   passwordHash: String
   accountCreated: Boolean!
 
-  organizations: [OrganizationMember]
-  groups: [GroupMember]
-  evacuationResponses: [EvacuationResponse]
+  organizations: [OrganizationMember!]
+  groups: [GroupMember!]
+  evacuationResponses: [EvacuationResponse!]
 }
 
 input AddGroupUser {
@@ -189,25 +175,26 @@ type Group {
   name: String!
   notificationSetting: GroupNotificationSetting
 
-  members: [GroupMember]
-  evacuationEvents: [EvacuationEvent]
+  members: [GroupMember!]
+  evacuationEvents: [EvacuationEvent!]
 }
 
 type UserGroup {
   id: Int!
   organizationId: Int!
   name: String!
-  members: [GroupMember]
-  evacuationEvents: [EvacuationEvent]
+  members: [GroupMember!]
+  evacuationEvents: [EvacuationEvent!]
 }
 
 type GroupMember {
   id: Int!
   userId: Int!
   groupId: Int!
-  status: String!
+  organizationMemberId: Int!
   admin: Boolean!
 
+  organizationMember: OrganizationMember
   group: Group
   user: User
 }
@@ -232,7 +219,7 @@ type EvacuationEvent {
   groupId: Int!
   message: String
 
-  responses: [EvacuationResponse]
+  responses: [EvacuationResponse!]
 }
 type EvacuationResponse {
   id: Int!

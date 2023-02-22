@@ -1,113 +1,109 @@
-import { PrismaClient } from "@prisma/client";
-import { InviteUser } from "src/types";
-interface GetOrganizationsInput {
-    db: PrismaClient;
-    userId: number;
-}
-interface GetOrganizationInput {
-    db: PrismaClient;
-    organizationId: number;
-}
-interface GetOrganizationForUserInput {
-    db: PrismaClient;
-    organizationId: number;
-    userId: number;
-}
-interface OrganizationNotificationSettingInput {
-    emailEnabled: boolean;
-    pushEnabled: boolean;
-    smsEnabled: boolean;
-}
-interface CreateOrganizationInput {
-    db: PrismaClient;
-    name: string;
-    userId: number;
-    organizationNotificationSetting: OrganizationNotificationSettingInput;
-}
-interface DeleteOrganizationInput {
-    db: PrismaClient;
-    organizationId: number;
-}
-interface UpdateOrganizationNotificationSettingInput {
-    db: PrismaClient;
-    organizationId: number;
-    organizationNotificationSetting: OrganizationNotificationSettingInput;
-}
-interface InvitedOrganizationUser {
-    admin: boolean;
-    email: string;
-    inviteToGroups: InviteUser[];
-}
-interface UpdateOrgInviteInput {
-    db: PrismaClient;
-    organizationId: number;
-    userId: number;
-    status: string;
-}
-interface InviteToOrganizationInput {
-    db: PrismaClient;
-    organizationId: number;
-    users: InvitedOrganizationUser[];
-}
-interface RemoveFromOrganizationInput {
-    db: PrismaClient;
-    organizationId: number;
-    userIds: number[];
-}
-interface CreateOrganizationAnnouncementInput {
-    db: PrismaClient;
-    userId: number;
-    organizationId: number;
-    title: string;
-    description?: string;
-}
-interface DeleteOrganizationAnnouncementInput {
-    db: PrismaClient;
-    userId: number;
-    announcementId: number;
-}
-export declare const getOrganizationsForUser: (data: GetOrganizationsInput) => Promise<(import(".prisma/client").OrganizationMember & {
+import { OrganizationMember, User } from "@prisma/client";
+import { Context } from "../server";
+import { OrganizationNotificationSettingInput, InvitedOrganizationUser } from "../generated/graphql";
+export declare const getOrganizationsForUser: (data: {
+    context: Context;
+}) => Promise<(OrganizationMember & {
     organization: import(".prisma/client").Organization & {
-        members: import(".prisma/client").OrganizationMember[];
+        members: OrganizationMember[];
     };
 })[]>;
-export declare const getOrganization: (data: GetOrganizationInput) => Promise<(import(".prisma/client").Organization & {
+export declare const getOrganization: (data: {
+    context: Context;
+    organizationId: number;
+}) => Promise<import(".prisma/client").Organization & {
     groups: import(".prisma/client").Group[];
-    members: (import(".prisma/client").OrganizationMember & {
-        user: import(".prisma/client").User;
+    members: (OrganizationMember & {
+        user: User;
     })[];
     announcements: import(".prisma/client").Announcement[];
     notificationSetting: import(".prisma/client").OrganizationNotificationSetting | null;
-}) | null>;
-export declare const getOrganizationForUser: (data: GetOrganizationForUserInput) => Promise<{
+}>;
+export declare const getOrganizationMembers: (data: {
+    context: Context;
+    organizationId: number;
+    cursor?: number | null;
+}) => Promise<{
+    data: (OrganizationMember & {
+        user: User;
+    })[];
+    cursor: number | null | undefined;
+}>;
+export declare const getOrganizationForUser: (data: {
+    context: Context;
+    organizationId: number;
+}) => Promise<{
     groups: (import(".prisma/client").GroupMember & {
         group: import(".prisma/client").Group;
     })[];
-    id?: number | undefined;
-    name?: string | undefined;
-    members?: (import(".prisma/client").OrganizationMember & {
-        user: import(".prisma/client").User;
-    })[] | undefined;
-    announcements?: import(".prisma/client").Announcement[] | undefined;
-    notificationSetting?: import(".prisma/client").OrganizationNotificationSetting | null | undefined;
+    id: number;
+    name: string;
+    members: (OrganizationMember & {
+        user: User;
+    })[];
+    announcements: import(".prisma/client").Announcement[];
+    notificationSetting: import(".prisma/client").OrganizationNotificationSetting | null;
 }>;
-export declare const createOrganization: (data: CreateOrganizationInput) => Promise<import(".prisma/client").Organization & {
+export declare const createOrganization: (data: {
+    context: Context;
+    name: string;
+    organizationNotificationSetting: OrganizationNotificationSettingInput;
+}) => Promise<import(".prisma/client").Organization & {
     groups: import(".prisma/client").Group[];
-    members: (import(".prisma/client").OrganizationMember & {
-        user: import(".prisma/client").User;
+    members: (OrganizationMember & {
+        user: User;
     })[];
     notificationSetting: import(".prisma/client").OrganizationNotificationSetting | null;
 }>;
-export declare const deleteOrganization: (data: DeleteOrganizationInput) => Promise<import(".prisma/client").Organization>;
-export declare const updateOrganizationNotificationOptions: (data: UpdateOrganizationNotificationSettingInput) => Promise<import(".prisma/client").OrganizationNotificationSetting>;
-export declare const inviteToOrganization: (data: InviteToOrganizationInput) => Promise<(import(".prisma/client").OrganizationMember & {
-    organization: import(".prisma/client").Organization;
-    user: import(".prisma/client").User;
-})[]>;
-export declare const updateOrgInvite: (data: UpdateOrgInviteInput) => Promise<import(".prisma/client").OrganizationMember>;
-export declare const removeFromOrganization: (data: RemoveFromOrganizationInput) => Promise<((import(".prisma/client").OrganizationMember & {
-    user: import(".prisma/client").User;
-}) | null | undefined)[]>;
-export declare const createOrganizationAnnouncement: (data: CreateOrganizationAnnouncementInput) => Promise<import(".prisma/client").Announcement>;
-export declare const deleteOrganizationAnnouncement: (data: DeleteOrganizationAnnouncementInput) => Promise<import(".prisma/client").Announcement>;
-export {};
+export declare const deleteOrganization: (data: {
+    context: Context;
+    organizationId: number;
+}) => Promise<import(".prisma/client").Organization>;
+export declare const updateOrganizationNotificationOptions: (data: {
+    context: Context;
+    organizationId: number;
+    organizationNotificationSetting: OrganizationNotificationSettingInput;
+}) => Promise<import(".prisma/client").OrganizationNotificationSetting>;
+export declare const inviteToOrganization: (data: {
+    context: Context;
+    organizationId: number;
+    users: InvitedOrganizationUser[];
+}) => Promise<{
+    succeeded: (OrganizationMember & {
+        user: User;
+    })[];
+    failed: string[];
+}>;
+export declare const updateOrgInvite: (data: {
+    context: Context;
+    organizationId: number;
+    status: string;
+}) => Promise<OrganizationMember>;
+export declare const removeFromOrganization: (data: {
+    context: Context;
+    organizationId: number;
+    userIds: number[];
+}) => Promise<{
+    succeeded: (OrganizationMember & {
+        user: User;
+    })[];
+    failed: number[];
+}>;
+export declare const createOrganizationAnnouncement: (data: {
+    context: Context;
+    organizationId: number;
+    title: string;
+    description?: string | null;
+}) => Promise<import(".prisma/client").Announcement>;
+export declare const deleteOrganizationAnnouncement: (data: {
+    context: Context;
+    announcementId: number;
+}) => Promise<import(".prisma/client").Announcement>;
+export declare const getAnnouncements: (data: {
+    context: Context;
+    organizationId: number;
+    cursor?: number | null;
+}) => Promise<{
+    data: import(".prisma/client").Announcement[];
+    cursor: number | null | undefined;
+}>;

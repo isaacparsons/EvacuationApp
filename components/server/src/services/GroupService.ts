@@ -1,88 +1,12 @@
-import { Group, GroupMember, Prisma, PrismaClient } from "@prisma/client";
-import { InviteUser } from "../types";
+import { Context } from "../server";
+import { User, GroupNotificationSettingInput, AddGroupUser } from "../generated/graphql";
+import { RequestError } from "../util/errors";
+import { Group, GroupMember } from "@prisma/client";
 
-interface GetGroupInput {
-  db: PrismaClient;
-  groupId: number;
-}
+export const getGroup = async (data: { context: Context; groupId: number }) => {
+  const { context, groupId } = data;
 
-interface GetGroupForUserInput {
-  db: PrismaClient;
-  groupId: number;
-  userId: number;
-}
-interface GetGroupMembersInput {
-  db: PrismaClient;
-  groupId: number;
-  cursor?: number;
-}
-
-interface GroupNotificationSettingInput {
-  emailEnabled: boolean;
-  pushEnabled: boolean;
-  smsEnabled: boolean;
-}
-interface CreateGroupInput {
-  db: PrismaClient;
-  name: string;
-  organizationId: number;
-  userId: number;
-  groupNotificationSetting: GroupNotificationSettingInput;
-}
-
-interface DeleteGroupInput {
-  db: PrismaClient;
-  groupId: number;
-}
-
-interface UpdateGroupNotificationSettingInput {
-  db: PrismaClient;
-  groupId: number;
-  groupNotificationSetting: GroupNotificationSettingInput;
-}
-
-interface InviteUsersToGroups {
-  db: PrismaClient;
-  userIds: number[];
-  groupIds: number[];
-}
-
-interface AddUser {
-  userId: number;
-  admin: boolean;
-}
-
-interface AddUsersInput {
-  db: PrismaClient;
-  groupId: number;
-  userId: number;
-  users: AddUser[];
-}
-
-interface RemoveMembersInput {
-  db: PrismaClient;
-  memberIds: number[];
-}
-
-interface UpdateInviteInput {
-  db: PrismaClient;
-  organizationId: number;
-  userId: number;
-  response: string;
-}
-
-interface UpdateGroupMemberInput {
-  db: PrismaClient;
-  groupId: number;
-  userId: number;
-  editorId: number;
-  admin: boolean;
-}
-
-export const getGroup = async (data: GetGroupInput) => {
-  const { db, groupId } = data;
-
-  const group = await db.group.findUnique({
+  const group = await context.db.group.findUnique({
     where: {
       id: groupId
     },
@@ -104,13 +28,17 @@ export const getGroup = async (data: GetGroupInput) => {
       notificationSetting: true
     }
   });
+  if (!group) {
+    throw new RequestError(`Group does not exist with id: ${groupId}`);
+  }
   return group;
 };
 
-export const getGroupForUser = async (data: GetGroupForUserInput) => {
-  const { db, groupId, userId } = data;
+export const getGroupForUser = async (data: { context: Context; groupId: number }) => {
+  const { context, groupId } = data;
 
-  const group = await db.user.findUnique({
+  const userId = context.user!.id;
+  const group = await context.db.user.findUnique({
     where: {
       id: userId
     },
@@ -148,12 +76,19 @@ export const getGroupForUser = async (data: GetGroupForUserInput) => {
       }
     }
   });
-  return group?.groups ? group?.groups[0].group : null;
+  if (!group) {
+    throw new RequestError(`Group with id: ${groupId} does not exist`);
+  }
+  return group?.groups[0].group;
 };
 
-export const getGroupMembers = async (data: GetGroupMembersInput) => {
-  const { groupId, db, cursor } = data;
-  const groupMembers = await db.groupMember.findMany({
+export const getGroupMembers = async (data: {
+  context: Context;
+  groupId: number;
+  cursor?: number;
+}) => {
+  const { groupId, context, cursor } = data;
+  const groupMembers = await context.db.groupMember.findMany({
     ...(cursor && { skip: 1 }),
     ...(cursor && {
       cursor: {
@@ -168,31 +103,41 @@ export const getGroupMembers = async (data: GetGroupMembersInput) => {
       groupId
     },
     include: {
-      user: true
+      user: true,
+      organizationMember: true
     }
   });
 
   return {
     data: groupMembers,
-    cursor:
-      groupMembers.length > 0
-        ? groupMembers[groupMembers.length - 1].id
-        : cursor
+    cursor: groupMembers.length > 0 ? groupMembers[groupMembers.length - 1].id : cursor
   };
 };
 
-export const createGroup = async (data: CreateGroupInput): Promise<Group> => {
-  const { name, userId, groupNotificationSetting, organizationId, db } = data;
-  const group = await db.group.create({
+export const createGroup = async (data: {
+  context: Context;
+  name: string;
+  organizationId: number;
+  groupNotificationSetting: GroupNotificationSettingInput;
+}) => {
+  const { name, groupNotificationSetting, organizationId, context } = data;
+  const group = await context.db.group.create({
     data: {
       name,
       organizationId,
       members: {
         create: {
-          status: "accepted",
           admin: true,
+          organizationMember: {
+            connect: {
+              userId_organizationId: {
+                userId: context.user!.id,
+                organizationId
+              }
+            }
+          },
           user: {
-            connect: { id: userId }
+            connect: { id: context.user!.id }
           }
         }
       },
@@ -209,9 +154,9 @@ export const createGroup = async (data: CreateGroupInput): Promise<Group> => {
   return group;
 };
 
-export const deleteGroup = async (data: DeleteGroupInput): Promise<Group> => {
-  const { groupId, db } = data;
-  const group = await db.group.delete({
+export const deleteGroup = async (data: { context: Context; groupId: number }): Promise<Group> => {
+  const { groupId, context } = data;
+  const group = await context.db.group.delete({
     where: {
       id: groupId
     }
@@ -219,11 +164,13 @@ export const deleteGroup = async (data: DeleteGroupInput): Promise<Group> => {
   return group;
 };
 
-export const updateGroupNotificationOptions = async (
-  data: UpdateGroupNotificationSettingInput
-) => {
-  const { groupId, groupNotificationSetting, db } = data;
-  const setting = await db.groupNotificationSetting.update({
+export const updateGroupNotificationOptions = async (data: {
+  context: Context;
+  groupId: number;
+  groupNotificationSetting: GroupNotificationSettingInput;
+}) => {
+  const { groupId, groupNotificationSetting, context } = data;
+  const setting = await context.db.groupNotificationSetting.update({
     where: {
       groupId
     },
@@ -232,66 +179,113 @@ export const updateGroupNotificationOptions = async (
   return setting;
 };
 
-export const addUsersToGroups = async (data: InviteUsersToGroups) => {
-  const { userIds, groupIds, db } = data;
+export const addUsersToGroups = async (data: {
+  context: Context;
+  organizationId: number;
+  userIds: number[];
+  groupIds: number[];
+}) => {
+  const { userIds, organizationId, groupIds, context } = data;
   await Promise.all(
     groupIds.map(async (groupId) => {
       await Promise.all(
         userIds.map(async (userId) => {
-          await db.groupMember.create({
-            data: {
-              status: "pending",
-              admin: false,
-              group: {
-                connect: { id: groupId }
-              },
-              user: {
-                connect: {
-                  id: userId
+          try {
+            await context.db.groupMember.create({
+              data: {
+                organizationMember: {
+                  connect: {
+                    userId_organizationId: {
+                      userId: userId,
+                      organizationId
+                    }
+                  }
+                },
+                admin: false,
+                group: {
+                  connect: { id: groupId }
+                },
+                user: {
+                  connect: {
+                    id: userId
+                  }
                 }
               }
-            }
-          });
+            });
+          } catch (error) {
+            context.log.error(`Unable to add user: ${userId} to group with id: ${groupId}`, error);
+          }
         })
       );
     })
   );
 };
 
-export const addUsersToGroup = async (
-  data: AddUsersInput
-): Promise<GroupMember[]> => {
-  const { users, groupId, db } = data;
-  const groupMembers = await Promise.all(
+export const addUsersToGroup = async (data: {
+  context: Context;
+  groupId: number;
+  users: AddGroupUser[];
+}): Promise<GroupMember[]> => {
+  const { users, groupId, context } = data;
+  const group = await context.db.group.findUnique({
+    where: {
+      id: groupId
+    }
+  });
+  if (!group) {
+    throw new RequestError(`No group with id: ${groupId}`);
+  }
+  const groupMembers = await Promise.allSettled(
     users.map(async (user) => {
-      const groupMember = await db.groupMember.create({
-        data: {
-          status: "accepted",
-          admin: user.admin,
-          group: {
-            connect: { id: groupId }
-          },
-          user: {
-            connect: {
-              id: user.userId
+      try {
+        const groupMember = await context.db.groupMember.create({
+          data: {
+            organizationMember: {
+              connect: {
+                userId_organizationId: {
+                  userId: user.userId,
+                  organizationId: group.organizationId
+                }
+              }
+            },
+            admin: user.admin,
+            group: {
+              connect: { id: groupId }
+            },
+            user: {
+              connect: {
+                id: user.userId
+              }
             }
-          }
-        },
-        include: { user: true, group: true }
-      });
-      return groupMember;
+          },
+          include: { user: true, group: true }
+        });
+        return groupMember;
+      } catch (error) {
+        context.log.error(`Unable to add user: ${user.userId} to group with id: ${groupId}`);
+        throw error;
+      }
     })
   );
 
-  return groupMembers;
+  return groupMembers
+    .filter((item) => item.status === "fulfilled")
+    .map(
+      (item) => (item as PromiseFulfilledResult<GroupMember & { user: User; group: Group }>).value
+    );
 };
 
-export const updateGroupMember = async (data: UpdateGroupMemberInput) => {
-  const { groupId, userId, editorId, admin, db } = data;
-  if (editorId === userId) {
-    throw new Error("Can't edit your own admin status");
+export const updateGroupMember = async (data: {
+  context: Context;
+  groupId: number;
+  userId: number;
+  admin: boolean;
+}) => {
+  const { groupId, userId, admin, context } = data;
+  if (context.user!.id === userId) {
+    throw new RequestError("Can't edit your own admin status");
   }
-  const groupMember = await db.groupMember.update({
+  const groupMember = await context.db.groupMember.update({
     where: {
       userId_groupId: {
         userId,
@@ -305,69 +299,38 @@ export const updateGroupMember = async (data: UpdateGroupMemberInput) => {
   return groupMember;
 };
 
-export const removeMembers = async (data: RemoveMembersInput) => {
-  const { memberIds, db } = data;
-  return Promise.all(
-    memberIds.map(async (memberId) => {
-      try {
-        return await db.groupMember.delete({
-          where: {
-            id: memberId
-          }
-        });
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-          if (error.code === "P2025") {
-            return null;
-          }
-        }
-      }
-    })
-  );
-};
+export const removeMembers = async (data: {
+  context: Context;
+  userIds: number[];
+  groupId: number;
+}) => {
+  const { groupId, userIds, context } = data;
 
-export const updateGroupInvites = async (
-  data: UpdateInviteInput
-): Promise<GroupMember[]> => {
-  const { organizationId, userId, response, db } = data;
-  const _groupMembers = await db.groupMember.findMany({
-    where: {
-      userId
-    },
-    include: {
-      group: true
-    }
-  });
-  const groupMembers = _groupMembers.filter(
-    (member) => member.group.organizationId === organizationId
-  );
-  if (response === "declined") {
-    return await Promise.all(
-      groupMembers.map(async (member) => {
-        return await db.groupMember.delete({
+  const succeeded: GroupMember[] = [];
+  const failed: number[] = [];
+  await Promise.all(
+    userIds.map(async (userId) => {
+      try {
+        const member = await context.db.groupMember.delete({
           where: {
             userId_groupId: {
               userId,
-              groupId: member.groupId
+              groupId
             }
           }
         });
-      })
-    );
-  }
-  return await Promise.all(
-    groupMembers.map(async (member) => {
-      return await db.groupMember.update({
-        where: {
-          userId_groupId: {
-            userId,
-            groupId: member.groupId
-          }
-        },
-        data: {
-          status: response
-        }
-      });
+        succeeded.push(member);
+      } catch (error) {
+        context.log.error(
+          `Failed to remove member with userId: ${userId} from group: ${groupId}`,
+          error
+        );
+        failed.push(userId);
+      }
     })
   );
+  return {
+    succeeded,
+    failed
+  };
 };

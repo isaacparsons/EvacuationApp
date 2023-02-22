@@ -1,108 +1,17 @@
-import { Prisma, PrismaClient } from "@prisma/client";
-import { InviteUser } from "src/types";
+import { OrganizationMember, User } from "@prisma/client";
+import { Context } from "../server";
+import doesAlreadyExistError from "../util/doesAlreadyExistError";
+import { RequestError } from "../util/errors";
+import {
+  OrganizationNotificationSettingInput,
+  InvitedOrganizationUser
+} from "../generated/graphql";
 
-interface GetOrganizationsInput {
-  db: PrismaClient;
-  userId: number;
-}
-
-interface GetOrganizationInput {
-  db: PrismaClient;
-  organizationId: number;
-}
-
-interface GetOrganizationMembersInput {
-  db: PrismaClient;
-  organizationId: number;
-  cursor?: number;
-}
-
-interface GetAnnouncementsInput {
-  db: PrismaClient;
-  organizationId: number;
-  cursor?: number;
-}
-
-interface GetOrganizationForUserInput {
-  db: PrismaClient;
-  organizationId: number;
-  userId: number;
-}
-
-interface IsOrgAdminInput {
-  db: PrismaClient;
-  userId: number;
-  organizationId: number;
-}
-
-interface OrganizationNotificationSettingInput {
-  emailEnabled: boolean;
-  pushEnabled: boolean;
-  smsEnabled: boolean;
-}
-
-interface CreateOrganizationInput {
-  db: PrismaClient;
-  name: string;
-  userId: number;
-  organizationNotificationSetting: OrganizationNotificationSettingInput;
-}
-
-interface DeleteOrganizationInput {
-  db: PrismaClient;
-  organizationId: number;
-}
-
-interface UpdateOrganizationNotificationSettingInput {
-  db: PrismaClient;
-  organizationId: number;
-  organizationNotificationSetting: OrganizationNotificationSettingInput;
-}
-
-interface InvitedOrganizationUser {
-  admin: boolean;
-  email: string;
-  inviteToGroups: InviteUser[];
-}
-
-interface UpdateOrgInviteInput {
-  db: PrismaClient;
-  organizationId: number;
-  userId: number;
-  status: string;
-}
-
-interface InviteToOrganizationInput {
-  db: PrismaClient;
-  organizationId: number;
-  users: InvitedOrganizationUser[];
-}
-
-interface RemoveFromOrganizationInput {
-  db: PrismaClient;
-  organizationId: number;
-  userIds: number[];
-}
-
-interface CreateOrganizationAnnouncementInput {
-  db: PrismaClient;
-  userId: number;
-  organizationId: number;
-  title: string;
-  description?: string;
-}
-
-interface DeleteOrganizationAnnouncementInput {
-  db: PrismaClient;
-  userId: number;
-  announcementId: number;
-}
-
-export const getOrganizationsForUser = async (data: GetOrganizationsInput) => {
-  const { userId, db } = data;
-  const organizations = await db.organizationMember.findMany({
+export const getOrganizationsForUser = async (data: { context: Context }) => {
+  const { context } = data;
+  const organizations = await context.db.organizationMember.findMany({
     where: {
-      userId
+      userId: context.user!.id
     },
     include: {
       organization: {
@@ -116,9 +25,9 @@ export const getOrganizationsForUser = async (data: GetOrganizationsInput) => {
   return organizations;
 };
 
-export const getOrganization = async (data: GetOrganizationInput) => {
-  const { organizationId, db } = data;
-  const organization = await db.organization.findUnique({
+export const getOrganization = async (data: { context: Context; organizationId: number }) => {
+  const { organizationId, context } = data;
+  const organization = await context.db.organization.findUnique({
     where: {
       id: organizationId
     },
@@ -133,14 +42,19 @@ export const getOrganization = async (data: GetOrganizationInput) => {
       announcements: true
     }
   });
+  if (!organization) {
+    throw new RequestError(`Organization does not exist with id: ${organizationId}`);
+  }
   return organization;
 };
 
-export const getOrganizationMembers = async (
-  data: GetOrganizationMembersInput
-) => {
-  const { organizationId, db, cursor } = data;
-  const organizationMembers = await db.organizationMember.findMany({
+export const getOrganizationMembers = async (data: {
+  context: Context;
+  organizationId: number;
+  cursor?: number | null;
+}) => {
+  const { organizationId, context, cursor } = data;
+  const organizationMembers = await context.db.organizationMember.findMany({
     ...(cursor && { skip: 1 }),
     ...(cursor && {
       cursor: {
@@ -168,11 +82,12 @@ export const getOrganizationMembers = async (
   };
 };
 
-export const getOrganizationForUser = async (
-  data: GetOrganizationForUserInput
-) => {
-  const { db, userId, organizationId } = data;
-  const organization = await db.organization.findUnique({
+export const getOrganizationForUser = async (data: {
+  context: Context;
+  organizationId: number;
+}) => {
+  const { context, organizationId } = data;
+  const organization = await context.db.organization.findUnique({
     where: {
       id: organizationId
     },
@@ -186,9 +101,12 @@ export const getOrganizationForUser = async (
       announcements: true
     }
   });
-  const allGroups = await db.user.findUnique({
+  if (!organization) {
+    throw new RequestError(`Organization with id: ${organizationId} does not exist`);
+  }
+  const allGroups = await context.db.user.findUnique({
     where: {
-      id: userId
+      id: context.user!.id
     },
     include: {
       groups: {
@@ -200,17 +118,19 @@ export const getOrganizationForUser = async (
   });
 
   const groups = allGroups
-    ? allGroups.groups.filter(
-        (groupMember) => groupMember.group.organizationId === organizationId
-      )
+    ? allGroups.groups.filter((groupMember) => groupMember.group.organizationId === organizationId)
     : [];
 
   return { ...organization, groups };
 };
 
-export const createOrganization = async (data: CreateOrganizationInput) => {
-  const { name, userId, db, organizationNotificationSetting } = data;
-  const organization = await db.organization.create({
+export const createOrganization = async (data: {
+  context: Context;
+  name: string;
+  organizationNotificationSetting: OrganizationNotificationSettingInput;
+}) => {
+  const { name, context, organizationNotificationSetting } = data;
+  const organization = await context.db.organization.create({
     data: {
       name,
       members: {
@@ -218,7 +138,7 @@ export const createOrganization = async (data: CreateOrganizationInput) => {
           status: "accepted",
           admin: true,
           user: {
-            connect: { id: userId }
+            connect: { id: context.user!.id }
           }
         }
       },
@@ -239,9 +159,9 @@ export const createOrganization = async (data: CreateOrganizationInput) => {
   return organization;
 };
 
-export const deleteOrganization = async (data: DeleteOrganizationInput) => {
-  const { organizationId, db } = data;
-  const organization = await db.organization.delete({
+export const deleteOrganization = async (data: { context: Context; organizationId: number }) => {
+  const { organizationId, context } = data;
+  const organization = await context.db.organization.delete({
     where: {
       id: organizationId
     }
@@ -249,11 +169,13 @@ export const deleteOrganization = async (data: DeleteOrganizationInput) => {
   return organization;
 };
 
-export const updateOrganizationNotificationOptions = async (
-  data: UpdateOrganizationNotificationSettingInput
-) => {
-  const { organizationId, organizationNotificationSetting, db } = data;
-  const setting = await db.organizationNotificationSetting.update({
+export const updateOrganizationNotificationOptions = async (data: {
+  context: Context;
+  organizationId: number;
+  organizationNotificationSetting: OrganizationNotificationSettingInput;
+}) => {
+  const { organizationId, organizationNotificationSetting, context } = data;
+  const setting = await context.db.organizationNotificationSetting.update({
     where: {
       organizationId
     },
@@ -262,55 +184,79 @@ export const updateOrganizationNotificationOptions = async (
   return setting;
 };
 
-export const inviteToOrganization = async (data: InviteToOrganizationInput) => {
-  const { users, organizationId, db } = data;
+export const inviteToOrganization = async (data: {
+  context: Context;
+  organizationId: number;
+  users: InvitedOrganizationUser[];
+}) => {
+  const { users, organizationId, context } = data;
 
-  const orgMembers = await Promise.all(
+  const succeeded: (OrganizationMember & { user: User })[] = [];
+  const failed: string[] = [];
+
+  await Promise.all(
     users.map(async (user) => {
-      const orgMember = await db.organizationMember.create({
-        data: {
-          status: "pending",
-          admin: user.admin,
-          organization: {
-            connect: { id: organizationId }
-          },
-          user: {
-            connectOrCreate: {
-              where: {
-                email: user.email.toLowerCase()
-              },
-              create: {
-                email: user.email.toLowerCase(),
-                accountCreated: false
+      try {
+        const member = await context.db.organizationMember.create({
+          data: {
+            status: "pending",
+            admin: user.admin,
+            organization: {
+              connect: { id: organizationId }
+            },
+            user: {
+              connectOrCreate: {
+                where: {
+                  email: user.email.toLowerCase()
+                },
+                create: {
+                  email: user.email.toLowerCase(),
+                  accountCreated: false
+                }
               }
             }
-          }
-        },
-        include: { user: true, organization: true }
-      });
-      return orgMember;
+          },
+          include: { user: true }
+        });
+        succeeded.push(member);
+      } catch (error) {
+        if (!doesAlreadyExistError(error)) {
+          context.log.error(
+            `Failed to add member with email: ${user.email} to organization: ${organizationId}`,
+            error
+          );
+          failed.push(user.email);
+        }
+      }
     })
   );
-  return orgMembers;
+  return {
+    succeeded,
+    failed
+  };
 };
 
-export const updateOrgInvite = async (data: UpdateOrgInviteInput) => {
-  const { organizationId, status, userId, db } = data;
+export const updateOrgInvite = async (data: {
+  context: Context;
+  organizationId: number;
+  status: string;
+}) => {
+  const { organizationId, status, context } = data;
   if (status === "declined") {
-    const orgMember = await db.organizationMember.delete({
+    const orgMember = await context.db.organizationMember.delete({
       where: {
         userId_organizationId: {
-          userId,
+          userId: context.user!.id,
           organizationId
         }
       }
     });
     return orgMember;
   }
-  const orgMember = await db.organizationMember.update({
+  const orgMember = await context.db.organizationMember.update({
     where: {
       userId_organizationId: {
-        userId,
+        userId: context.user!.id,
         organizationId
       }
     },
@@ -321,14 +267,18 @@ export const updateOrgInvite = async (data: UpdateOrgInviteInput) => {
   return orgMember;
 };
 
-export const removeFromOrganization = async (
-  data: RemoveFromOrganizationInput
-) => {
-  const { userIds, organizationId, db } = data;
-  return Promise.all(
+export const removeFromOrganization = async (data: {
+  context: Context;
+  organizationId: number;
+  userIds: number[];
+}) => {
+  const { userIds, organizationId, context } = data;
+  const succeeded: (OrganizationMember & { user: User })[] = [];
+  const failed: number[] = [];
+  await Promise.all(
     userIds.map(async (userId) => {
       try {
-        return await db.organizationMember.delete({
+        const member = await context.db.organizationMember.delete({
           where: {
             userId_organizationId: {
               userId,
@@ -339,38 +289,47 @@ export const removeFromOrganization = async (
             user: true
           }
         });
+        succeeded.push(member);
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-          if (error.code === "P2025") {
-            return null;
-          }
-        }
+        context.log.error(
+          `Failed to remove member with userId: ${userId} from organization: ${organizationId}`,
+          error
+        );
+        failed.push(userId);
       }
     })
   );
+  return {
+    succeeded,
+    failed
+  };
 };
 
-export const createOrganizationAnnouncement = async (
-  data: CreateOrganizationAnnouncementInput
-) => {
-  const { title, description, userId, organizationId, db } = data;
-  const announcement = await db.announcement.create({
+export const createOrganizationAnnouncement = async (data: {
+  context: Context;
+  organizationId: number;
+  title: string;
+  description?: string | null;
+}) => {
+  const { title, description, organizationId, context } = data;
+  const announcement = await context.db.announcement.create({
     data: {
       title,
       description,
       date: new Date().toISOString(),
-      createdBy: userId,
+      createdBy: context.user!.id,
       organizationId
     }
   });
   return announcement;
 };
 
-export const deleteOrganizationAnnouncement = async (
-  data: DeleteOrganizationAnnouncementInput
-) => {
-  const { announcementId, db } = data;
-  const announcement = await db.announcement.delete({
+export const deleteOrganizationAnnouncement = async (data: {
+  context: Context;
+  announcementId: number;
+}) => {
+  const { announcementId, context } = data;
+  const announcement = await context.db.announcement.delete({
     where: {
       id: announcementId
     }
@@ -378,9 +337,13 @@ export const deleteOrganizationAnnouncement = async (
   return announcement;
 };
 
-export const getAnnouncements = async (data: GetAnnouncementsInput) => {
-  const { organizationId, db, cursor } = data;
-  const announcements = await db.announcement.findMany({
+export const getAnnouncements = async (data: {
+  context: Context;
+  organizationId: number;
+  cursor?: number | null;
+}) => {
+  const { organizationId, context, cursor } = data;
+  const announcements = await context.db.announcement.findMany({
     ...(cursor && { skip: 1 }),
     ...(cursor && {
       cursor: {
@@ -397,9 +360,6 @@ export const getAnnouncements = async (data: GetAnnouncementsInput) => {
   });
   return {
     data: announcements,
-    cursor:
-      announcements.length > 0
-        ? announcements[announcements.length - 1].id
-        : cursor
+    cursor: announcements.length > 0 ? announcements[announcements.length - 1].id : cursor
   };
 };

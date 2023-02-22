@@ -1,1 +1,2 @@
-export declare const resolvers: import("@graphql-tools/utils").IResolvers<any, any, Record<string, any>, any>;
+import { Resolvers } from "src/generated/graphql";
+export declare const resolvers: Resolvers;

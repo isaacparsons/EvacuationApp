@@ -1,18 +1,22 @@
-import { EvacuationEvent, Organization, OrganizationMember, PrismaClient, User } from "@prisma/client";
+import { Announcement, EvacuationEvent, OrganizationMember, PrismaClient, User } from "@prisma/client";
+import { Context } from "../server";
 interface SendAlertNotifications {
     db: PrismaClient;
     evacuationEvent: EvacuationEvent;
 }
-interface SendCompleteSignupNotifications {
+export declare const sendAnnouncementNotification: (data: {
     db: PrismaClient;
-    members: Array<OrganizationMember & {
-        user: User;
-        organization: Organization;
-    }>;
-}
+    announcement: Announcement;
+    groupIds?: number[] | null;
+}) => Promise<void>;
 export declare const sendAlertNotification: (data: SendAlertNotifications) => Promise<void>;
 export declare const sendAlertEndedNotification: (data: SendAlertNotifications) => Promise<void>;
 export declare const sendPasswordResetNotification: (user: User) => Promise<void>;
-export declare const sendCompleteSignupNotifications: (data: SendCompleteSignupNotifications) => Promise<void>;
-export declare const sendOrgAnnouncementNotification: () => void;
+export declare const sendCompleteSignupNotifications: (data: {
+    context: Context;
+    organizationId: number;
+    members: (OrganizationMember & {
+        user: User;
+    })[];
+}) => Promise<void>;
 export {};

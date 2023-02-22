@@ -1,49 +1,43 @@
 import { sendPasswordResetNotification } from "../services/NotificationService";
 import { getJoinedEntities } from "../services/UserService";
-import {
-  deleteUser,
-  login,
-  resetPassword,
-  signup,
-  updateUser
-} from "../services/UserService";
-import { Context } from "../types";
+import { deleteUser, login, resetPassword, signup, updateUser } from "../services/UserService";
+import { Resolvers } from "../generated/graphql";
 
-const AuthResolver = {
+const AuthResolver: Resolvers = {
   Query: {
-    getJoinedEntities: async (parent, args, context: Context, info) => {
+    getJoinedEntities: async (parent, args, context, info) => {
       return getJoinedEntities({
-        db: context.db,
-        userId: context.user.id
+        context
       });
     }
   },
   Mutation: {
     login: async (parent, args, context) => {
-      const auth = await login({ db: context.db, ...args });
+      const auth = await login({ context, ...args });
       return auth;
     },
     resetPassword: async (parent, args, context) => {
-      const user = await resetPassword({ db: context.db, ...args });
+      const user = await resetPassword({ context, ...args });
       await sendPasswordResetNotification(user);
       return user;
     },
     signup: async (parent, args, context, info) => {
-      const auth = await signup({ db: context.db, ...args });
+      const auth = await signup({ context, ...args });
       return auth;
     },
     deleteUser: async (parent, args, context, info) => {
       const user = await deleteUser({
-        db: context.db,
-        email: context.user.email
+        context
       });
       return user;
     },
     updateUser: async (parent, args, context, info) => {
       const user = await updateUser({
-        user: context.user,
-        db: context.db,
-        ...args
+        context,
+        phoneNumber: args.phoneNumber,
+        password: args.password,
+        firstName: args.firstName,
+        lastName: args.lastName
       });
       return user;
     }

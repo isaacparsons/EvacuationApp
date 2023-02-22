@@ -12,7 +12,7 @@ export const getGroupMemberFromEvacuationId = async (
   });
 
   if (!evacuationEvent) {
-    throw new Error("Evacuation event does not exist");
+    return new Error("Evacuation event does not exist");
   }
 
   const member = await db.groupMember.findUnique({

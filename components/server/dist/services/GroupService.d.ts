@@ -1,58 +1,10 @@
-import { Group, GroupMember, PrismaClient } from "@prisma/client";
-import { InviteUser } from "../types";
-interface GetGroupInput {
-    db: PrismaClient;
+import { Context } from "../server";
+import { GroupNotificationSettingInput, AddGroupUser } from "../generated/graphql";
+import { Group, GroupMember } from "@prisma/client";
+export declare const getGroup: (data: {
+    context: Context;
     groupId: number;
-}
-interface GetGroupForUserInput {
-    db: PrismaClient;
-    groupId: number;
-    userId: number;
-}
-interface GroupNotificationSettingInput {
-    emailEnabled: boolean;
-    pushEnabled: boolean;
-    smsEnabled: boolean;
-}
-interface CreateGroupInput {
-    db: PrismaClient;
-    name: string;
-    organizationId: number;
-    userId: number;
-    groupNotificationSetting: GroupNotificationSettingInput;
-}
-interface DeleteGroupInput {
-    db: PrismaClient;
-    groupId: number;
-}
-interface UpdateGroupNotificationSettingInput {
-    db: PrismaClient;
-    groupId: number;
-    groupNotificationSetting: GroupNotificationSettingInput;
-}
-interface InvitedUsersInput {
-    db: PrismaClient;
-    groupId: number;
-    userId: number;
-    users: [InviteUser];
-}
-interface RemoveMembersInput {
-    db: PrismaClient;
-    memberIds: [number];
-}
-interface UpdateInviteInput {
-    db: PrismaClient;
-    groupId: number;
-    userId: number;
-    response: string;
-}
-interface UpdateGroupMemberInput {
-    db: PrismaClient;
-    groupId: number;
-    userId: number;
-    admin: boolean;
-}
-export declare const getGroup: (data: GetGroupInput) => Promise<(Group & {
+}) => Promise<Group & {
     members: (GroupMember & {
         user: import(".prisma/client").User;
     })[];
@@ -62,8 +14,11 @@ export declare const getGroup: (data: GetGroupInput) => Promise<(Group & {
         })[];
     })[];
     notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
-}) | null>;
-export declare const getGroupForUser: (data: GetGroupForUserInput) => Promise<(Group & {
+}>;
+export declare const getGroupForUser: (data: {
+    context: Context;
+    groupId: number;
+}) => Promise<Group & {
     members: (GroupMember & {
         user: import(".prisma/client").User;
     })[];
@@ -72,12 +27,58 @@ export declare const getGroupForUser: (data: GetGroupForUserInput) => Promise<(G
             user: import(".prisma/client").User;
         })[];
     })[];
-}) | null>;
-export declare const createGroup: (data: CreateGroupInput) => Promise<Group>;
-export declare const deleteGroup: (data: DeleteGroupInput) => Promise<Group>;
-export declare const updateGroupNotificationOptions: (data: UpdateGroupNotificationSettingInput) => Promise<import(".prisma/client").GroupNotificationSetting>;
-export declare const inviteUsers: (data: InvitedUsersInput) => Promise<GroupMember[]>;
-export declare const updateInvite: (data: UpdateInviteInput) => Promise<GroupMember>;
-export declare const updateGroupMember: (data: UpdateGroupMemberInput) => Promise<GroupMember>;
-export declare const removeMembers: (data: RemoveMembersInput) => Promise<(GroupMember | null | undefined)[]>;
-export {};
+}>;
+export declare const getGroupMembers: (data: {
+    context: Context;
+    groupId: number;
+    cursor?: number;
+}) => Promise<{
+    data: (GroupMember & {
+        user: import(".prisma/client").User;
+        organizationMember: import(".prisma/client").OrganizationMember;
+    })[];
+    cursor: number | undefined;
+}>;
+export declare const createGroup: (data: {
+    context: Context;
+    name: string;
+    organizationId: number;
+    groupNotificationSetting: GroupNotificationSettingInput;
+}) => Promise<Group & {
+    members: GroupMember[];
+    notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
+}>;
+export declare const deleteGroup: (data: {
+    context: Context;
+    groupId: number;
+}) => Promise<Group>;
+export declare const updateGroupNotificationOptions: (data: {
+    context: Context;
+    groupId: number;
+    groupNotificationSetting: GroupNotificationSettingInput;
+}) => Promise<import(".prisma/client").GroupNotificationSetting>;
+export declare const addUsersToGroups: (data: {
+    context: Context;
+    organizationId: number;
+    userIds: number[];
+    groupIds: number[];
+}) => Promise<void>;
+export declare const addUsersToGroup: (data: {
+    context: Context;
+    groupId: number;
+    users: AddGroupUser[];
+}) => Promise<GroupMember[]>;
+export declare const updateGroupMember: (data: {
+    context: Context;
+    groupId: number;
+    userId: number;
+    admin: boolean;
+}) => Promise<GroupMember>;
+export declare const removeMembers: (data: {
+    context: Context;
+    userIds: number[];
+    groupId: number;
+}) => Promise<{
+    succeeded: GroupMember[];
+    failed: number[];
+}>;

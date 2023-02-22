@@ -3,7 +3,6 @@ import { gql } from "apollo-server";
 import * as bcrypt from "bcryptjs";
 import { server } from "../server";
 import TokenService from "../services/TokenService";
-import { InviteUser, User } from "../types";
 
 const prisma = new PrismaClient();
 const tokenService = new TokenService();
@@ -58,11 +57,7 @@ export const inviteUsersToOrg = async (
   return;
 };
 
-export const updateInvite = async (
-  organizationId: number,
-  status: string,
-  token: string
-) => {
+export const updateInvite = async (organizationId: number, status: string, token: string) => {
   return server.executeOperation(
     {
       query: gql`

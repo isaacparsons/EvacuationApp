@@ -18,141 +18,109 @@ import {
   getAnnouncements
 } from "../services/OrganizationService";
 
-import { Context } from "../types";
-import { addUsersToGroups, updateGroupInvites } from "../services/GroupService";
+import { addUsersToGroups } from "../services/GroupService";
+import { Resolvers } from "../generated/graphql";
 
-const OrganizationResolver = {
+const OrganizationResolver: Resolvers = {
   Query: {
-    getOrganizations: async (parent, args, context: Context, info) => {
+    getOrganizations: async (parent, args, context, info) => {
       const organizations = await getOrganizationsForUser({
-        db: context.db,
-        userId: context.user.id
+        context
       });
       return organizations;
     },
-    getOrganization: async (parent, args, context: Context, info) => {
+    getOrganization: async (parent, args, context, info) => {
       return getOrganization({
-        db: context.db,
-        organizationId: args.organizationId
-      });
-    },
-    getOrganizationForUser: async (parent, args, context: Context, info) => {
-      return getOrganizationForUser({
-        db: context.db,
-        organizationId: args.organizationId,
-        userId: context.user.id
-      });
-    },
-    getOrganizationMembers: async (parent, args, context: Context, info) => {
-      return getOrganizationMembers({
-        db: context.db,
+        context,
         ...args
       });
     },
-    getAnnouncements: async (parent, args, context: Context, info) => {
+    getOrganizationForUser: async (parent, args, context, info) => {
+      return getOrganizationForUser({
+        context,
+        ...args
+      });
+    },
+    getOrganizationMembers: async (parent, args, context, info) => {
+      return getOrganizationMembers({
+        context,
+        ...args
+      });
+    },
+    getAnnouncements: async (parent, args, context, info) => {
       return getAnnouncements({
-        db: context.db,
+        context,
         ...args
       });
     }
   },
   Mutation: {
-    createOrganization: async (
-      parent,
-      args,
-      context: Context,
-      info
-    ): Promise<any> => {
+    createOrganization: async (parent, args, context, info) => {
       const organization = await createOrganization({
-        db: context.db,
-        ...args,
-        userId: context.user.id
+        context,
+        ...args
       });
       return organization;
     },
-    deleteOrganization: async (
-      parent,
-      args,
-      context: Context,
-      info
-    ): Promise<any> => {
+    deleteOrganization: async (parent, args, context, info) => {
       const organization = await deleteOrganization({
-        db: context.db,
+        context,
         ...args
       });
       return organization;
     },
-    updateOrganizationNotificationOptions: async (
-      parent,
-      args,
-      context: Context,
-      info
-    ): Promise<any> => {
+    updateOrganizationNotificationOptions: async (parent, args, context, info) => {
       const organization = await updateOrganizationNotificationOptions({
-        db: context.db,
+        context,
         ...args
       });
       return organization;
     },
-    inviteToOrganization: async (
-      parent,
-      args,
-      context: Context,
-      info
-    ): Promise<any> => {
-      const members = await inviteToOrganization({
-        db: context.db,
+    inviteToOrganization: async (parent, args, context, info) => {
+      const { succeeded, failed } = await inviteToOrganization({
+        context,
         ...args
       });
-      const userIds = members.map((member) => member.userId);
-      await addUsersToGroups({
-        db: context.db,
-        userIds,
-        groupIds: args.groupIds
-      });
-      await sendCompleteSignupNotifications({ db: context.db, members });
-      return members;
-    },
-    updateOrgInvite: async (
-      parent,
-      args,
-      context: Context,
-      info
-    ): Promise<any> => {
-      const organizationMember = await updateOrgInvite({
-        db: context.db,
-        ...args,
-        userId: context.user.id
-      });
-      await updateGroupInvites({
-        db: context.db,
+      const userIds = succeeded.map((member) => member.userId);
+      if (args.groupIds && args.groupIds.length > 0) {
+        await addUsersToGroups({
+          context,
+          organizationId: args.organizationId,
+          userIds,
+          groupIds: args.groupIds
+        });
+      }
+      const membersToEmail = succeeded.filter((member) => !member.user.accountCreated);
+      await sendCompleteSignupNotifications({
+        context,
         organizationId: args.organizationId,
-        response: args.status,
-        userId: context.user.id
+        members: membersToEmail
+      });
+      if (failed.length > 0) {
+        throw new Error("failed to invite 1 or more users");
+      }
+      return succeeded;
+    },
+    updateOrgInvite: async (parent, args, context, info) => {
+      const organizationMember = await updateOrgInvite({
+        context,
+        ...args
       });
       return organizationMember;
     },
-    removeFromOrganization: async (
-      parent,
-      args,
-      context,
-      info
-    ): Promise<any> => {
-      const organization = await removeFromOrganization({
-        db: context.db,
+    removeFromOrganization: async (parent, args, context, info) => {
+      const { succeeded, failed } = await removeFromOrganization({
+        context,
         ...args
       });
-      return organization;
+      if (failed.length > 0) {
+        throw new Error("Failed to remove 1 or more members");
+      }
+      return succeeded;
     },
-    createOrganizationAnnouncement: async (
-      parent,
-      args,
-      context: Context,
-      info
-    ): Promise<any> => {
+    createOrganizationAnnouncement: async (parent, args, context, info) => {
       const announcement = await createOrganizationAnnouncement({
-        db: context.db,
-        userId: context.user.id,
+        context,
         ...args
       });
       await sendAnnouncementNotification({
@@ -162,15 +130,9 @@ const OrganizationResolver = {
       });
       return announcement;
     },
-    deleteOrganizationAnnouncement: async (
-      parent,
-      args,
-      context: Context,
-      info
-    ): Promise<any> => {
+    deleteOrganizationAnnouncement: async (parent, args, context, info) => {
       const organization = await deleteOrganizationAnnouncement({
-        db: context.db,
-        userId: context.user.id,
+        context,
         ...args
       });
       return organization;

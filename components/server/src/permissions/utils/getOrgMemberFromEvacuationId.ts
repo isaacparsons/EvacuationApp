@@ -11,7 +11,7 @@ export const getOrgMemberFromEvacuationId = async (
     }
   });
   if (!evacuationEvent) {
-    throw new Error("Evacuation event does not exist");
+    return new Error("Evacuation event does not exist");
   }
   const group = await db.group.findUnique({
     where: {
@@ -19,7 +19,7 @@ export const getOrgMemberFromEvacuationId = async (
     }
   });
   if (!group) {
-    throw new Error("Group does not exist");
+    return new Error("Group does not exist");
   }
   const member = await db.organizationMember.findUnique({
     where: {

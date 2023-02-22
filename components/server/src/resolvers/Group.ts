@@ -2,38 +2,34 @@ import { Group } from "@prisma/client";
 import {
   addUsersToGroup,
   createGroup,
-  // getGroupMembers,
   deleteGroup,
   getGroup,
   removeMembers,
   updateGroupNotificationOptions
 } from "../services/GroupService";
-import {
-  getGroupForUser,
-  updateGroupMember,
-  getGroupMembers
-} from "../services/GroupService";
-import { Context, GroupNotificationSetting } from "../types";
+import { getGroupForUser, updateGroupMember, getGroupMembers } from "../services/GroupService";
 
-const GroupResolver = {
+import { Resolvers, GroupNotificationSetting } from "../generated/graphql";
+
+const GroupResolver: Resolvers = {
   Query: {
-    getGroup: async (parent, args, context: Context, info) => {
+    getGroup: async (parent, args, context, info) => {
       return getGroup({
         groupId: args.groupId,
-        db: context.db
+        context
       });
     },
-    getGroupForUser: async (parent, args, context: Context, info) => {
+    getGroupForUser: async (parent, args, context, info) => {
       return getGroupForUser({
-        userId: context.user.id,
         groupId: args.groupId,
-        db: context.db
+        context
       });
     },
-    getGroupMembers: async (parent, args, context: Context, info) => {
+    getGroupMembers: async (parent, args, context, info) => {
       return getGroupMembers({
-        ...args,
-        db: context.db
+        groupId: args.groupId,
+        cursor: args.cursor!,
+        context
       });
     }
   },
@@ -41,15 +37,14 @@ const GroupResolver = {
     createGroup: async (parent, args, context, info): Promise<Group> => {
       const group = await createGroup({
         ...args,
-        userId: context.user.id,
-        db: context.db
+        context
       });
       return group;
     },
     deleteGroup: async (parent, args, context, info): Promise<Group> => {
       const group = await deleteGroup({
         ...args,
-        db: context.db
+        context
       });
       return group;
     },
@@ -61,28 +56,32 @@ const GroupResolver = {
     ): Promise<GroupNotificationSetting> => {
       const groupNotificationSetting = await updateGroupNotificationOptions({
         ...args,
-        db: context.db
+        context
       });
       return groupNotificationSetting;
     },
     addUsersToGroup: async (parent, args, context, info) => {
       return addUsersToGroup({
-        ...args,
-        db: context.db
+        groupId: args.groupId,
+        users: args.users!,
+        context
       });
     },
     removeMembers: async (parent, args, context, info) => {
-      const members = await removeMembers({
-        ...args,
-        db: context.db
+      const { succeeded, failed } = await removeMembers({
+        groupId: args.groupId,
+        userIds: args.userIds,
+        context
       });
-      return members;
+      if (failed.length > 0) {
+        throw new Error("Failed to remove 1 or more members");
+      }
+      return succeeded;
     },
     updateGroupMember: async (parent, args, context, info) => {
       const groupMember = await updateGroupMember({
         ...args,
-        editorId: context.user.id,
-        db: context.db
+        context
       });
       return groupMember;
     }

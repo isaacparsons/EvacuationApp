@@ -28,7 +28,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
 
-    "lib": ["es2017", "esnext"],
+    "lib": ["es2017", "esnext", "DOM"],
     "types": ["node", "jest"],
     "typeRoots": ["node_modules/@types", "src/generated"],
 

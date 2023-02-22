@@ -212,7 +212,14 @@ describe("group tests", () => {
           organizationId: org.id,
           members: {
             create: {
-              status: "accepted",
+              organizationMember: {
+                connect: {
+                  userId_organizationId: {
+                    userId: user1.id,
+                    organizationId: org.id
+                  }
+                }
+              },
               admin: true,
               user: {
                 connect: { id: user1.id }

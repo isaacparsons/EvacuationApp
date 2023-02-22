@@ -44,9 +44,10 @@ model GroupMember {
   id                    Int      @id @default(autoincrement())
   userId                Int
   groupId               Int
-  status                String
+  organizationMemberId  Int
   admin                 Boolean
 
+  organizationMember    OrganizationMember @relation(fields: [organizationMemberId], references: [id], onDelete: Cascade)
   user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
   group                 Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
@@ -120,6 +121,7 @@ model OrganizationMember {
   status                String
   admin                 Boolean
 
+  groups                GroupMember[]
   user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
