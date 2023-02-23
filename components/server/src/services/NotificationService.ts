@@ -192,9 +192,11 @@ export const sendPasswordResetNotification = async (user: User) => {
 export const sendCompleteSignupNotifications = async (data: {
   context: Context;
   organizationId: number;
-  members: Array<OrganizationMember & {
-    user: User;
-  }>;
+  members: Array<
+    OrganizationMember & {
+      user: User;
+    }
+  >;
 }) => {
   const { members, organizationId, context } = data;
 
