@@ -1,11 +1,11 @@
 import { OrganizationMember, User } from "@prisma/client";
+import {
+  InvitedOrganizationUser,
+  OrganizationNotificationSettingInput
+} from "../generated/graphql";
 import { Context } from "../server";
 import doesAlreadyExistError from "../util/doesAlreadyExistError";
 import { RequestError } from "../util/errors";
-import {
-  OrganizationNotificationSettingInput,
-  InvitedOrganizationUser
-} from "../generated/graphql";
 
 export const getOrganizationsForUser = async (data: { context: Context }) => {
   const { context } = data;
@@ -191,7 +191,7 @@ export const inviteToOrganization = async (data: {
 }) => {
   const { users, organizationId, context } = data;
 
-  const succeeded: (OrganizationMember & { user: User })[] = [];
+  const succeeded: Array<OrganizationMember & { user: User }> = [];
   const failed: string[] = [];
 
   await Promise.all(
@@ -273,7 +273,7 @@ export const removeFromOrganization = async (data: {
   userIds: number[];
 }) => {
   const { userIds, organizationId, context } = data;
-  const succeeded: (OrganizationMember & { user: User })[] = [];
+  const succeeded: Array<OrganizationMember & { user: User }> = [];
   const failed: number[] = [];
   await Promise.all(
     userIds.map(async (userId) => {

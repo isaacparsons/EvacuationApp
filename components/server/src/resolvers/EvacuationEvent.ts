@@ -1,7 +1,7 @@
 import { Resolvers } from "../generated/graphql";
 import {
-  getInProgressEvacuationEvents,
-  getEvacuationEvents
+  getEvacuationEvents,
+  getInProgressEvacuationEvents
 } from "../services/EvacuationEventService";
 import {
   createEvent,

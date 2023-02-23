@@ -16,12 +16,7 @@ export default class EmailService {
     });
   }
 
-  public sendEmail = async (
-    users: User[],
-    subject: string,
-    message: string,
-    link?: string
-  ) => {
+  public sendEmail = async (users: User[], subject: string, message: string, link?: string) => {
     try {
       const emailList = users.reduce((list, user, i) => {
         if (i === 0) {

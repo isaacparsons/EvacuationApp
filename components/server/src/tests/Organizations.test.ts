@@ -1,11 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { gql } from "apollo-server";
-import { setupUser, deleteDb } from "../dev/dbUtil";
+import { deleteDb, setupUser } from "../dev/dbUtil";
 import {
   ORG,
-  ORG_NOTIFICATION_SETTINGS,
   ORG_ADMIN_MEMBER,
   ORG_NON_ADMIN_MEMBER,
+  ORG_NOTIFICATION_SETTINGS,
   USER1,
   USER2
 } from "../dev/testData";
@@ -161,9 +161,7 @@ describe("organization tests", () => {
   describe("invite users", () => {
     it("should invite users to org if user is admin", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: invitedUser, token: invitedUserToken } = await setupUser(
-        USER2
-      );
+      const { user: invitedUser, token: invitedUserToken } = await setupUser(USER2);
 
       const users = [{ admin: false, email: invitedUser.email }];
 
@@ -191,10 +189,7 @@ describe("organization tests", () => {
               $organizationId: Int!
               $users: [InvitedOrganizationUser]
             ) {
-              inviteToOrganization(
-                organizationId: $organizationId
-                users: $users
-              ) {
+              inviteToOrganization(organizationId: $organizationId, users: $users) {
                 id
                 userId
                 organizationId
@@ -225,9 +220,7 @@ describe("organization tests", () => {
     });
     it("should not invite users to org if user is not admin", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: invitedUser, token: invitedUserToken } = await setupUser(
-        USER2
-      );
+      const { user: invitedUser, token: invitedUserToken } = await setupUser(USER2);
 
       const users = [{ admin: false, email: invitedUser.email }];
 
@@ -255,10 +248,7 @@ describe("organization tests", () => {
               $organizationId: Int!
               $users: [InvitedOrganizationUser]
             ) {
-              inviteToOrganization(
-                organizationId: $organizationId
-                users: $users
-              ) {
+              inviteToOrganization(organizationId: $organizationId, users: $users) {
                 id
                 userId
                 organizationId
@@ -288,9 +278,7 @@ describe("organization tests", () => {
   describe("remove users", () => {
     it("should remove users from org if user is admin", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: memberUser, token: memberUserToken } = await setupUser(
-        USER2
-      );
+      const { user: memberUser, token: memberUserToken } = await setupUser(USER2);
 
       const org = await prisma.organization.create({
         data: {
@@ -321,14 +309,8 @@ describe("organization tests", () => {
       const result = await server.executeOperation(
         {
           query: gql`
-            mutation RemoveFromOrganization(
-              $organizationId: Int!
-              $userIds: [Int]
-            ) {
-              removeFromOrganization(
-                organizationId: $organizationId
-                userIds: $userIds
-              ) {
+            mutation RemoveFromOrganization($organizationId: Int!, $userIds: [Int]) {
+              removeFromOrganization(organizationId: $organizationId, userIds: $userIds) {
                 id
                 organizationId
                 user {
@@ -362,9 +344,7 @@ describe("organization tests", () => {
     });
     it("should not remove users from org if user is not admin", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: memberUser, token: memberUserToken } = await setupUser(
-        USER2
-      );
+      const { user: memberUser, token: memberUserToken } = await setupUser(USER2);
 
       const org = await prisma.organization.create({
         data: {
@@ -395,14 +375,8 @@ describe("organization tests", () => {
       const result = await server.executeOperation(
         {
           query: gql`
-            mutation RemoveFromOrganization(
-              $organizationId: Int!
-              $userIds: [Int]
-            ) {
-              removeFromOrganization(
-                organizationId: $organizationId
-                userIds: $userIds
-              ) {
+            mutation RemoveFromOrganization($organizationId: Int!, $userIds: [Int]) {
+              removeFromOrganization(organizationId: $organizationId, userIds: $userIds) {
                 id
                 organizationId
                 user {
@@ -428,9 +402,7 @@ describe("organization tests", () => {
   describe("update invite", () => {
     it("should update invite if the invite is for the user", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: invitedUser, token: invitedUserToken } = await setupUser(
-        USER2
-      );
+      const { user: invitedUser, token: invitedUserToken } = await setupUser(USER2);
       const org = await prisma.organization.create({
         data: {
           ...ORG,
@@ -459,10 +431,7 @@ describe("organization tests", () => {
         {
           query: gql`
             mutation UpdateOrgInvite($organizationId: Int!, $status: String!) {
-              updateOrgInvite(
-                organizationId: $organizationId
-                status: $status
-              ) {
+              updateOrgInvite(organizationId: $organizationId, status: $status) {
                 id
                 userId
                 organizationId

@@ -1,6 +1,6 @@
 import { OrganizationMember, User } from "@prisma/client";
+import { InvitedOrganizationUser, OrganizationNotificationSettingInput } from "../generated/graphql";
 import { Context } from "../server";
-import { OrganizationNotificationSettingInput, InvitedOrganizationUser } from "../generated/graphql";
 export declare const getOrganizationsForUser: (data: {
     context: Context;
 }) => Promise<(OrganizationMember & {

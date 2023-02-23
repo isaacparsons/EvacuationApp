@@ -1,6 +1,6 @@
 import { User } from "@prisma/client";
-import { Context } from "../server";
 import { Auth } from "../generated/graphql";
+import { Context } from "../server";
 export declare const login: (data: {
     email: string;
     password: string;

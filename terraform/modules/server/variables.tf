@@ -22,9 +22,9 @@ variable "settings" {
     "database" = {
       allocated_storage   = 20            // storage in gigabytes
       engine              = "postgres"    // engine type
-      engine_version      = "13"      // engine version
+      engine_version      = "13"          // engine version
       instance_class      = "db.t3.micro" // rds instance type
-      db_name             = "evacuation"    // database name
+      db_name             = "evacuation"  // database name
       skip_final_snapshot = true
     },
     "backend" = {
@@ -60,7 +60,7 @@ variable "my_ip" {
   description = "Your IP address"
   type        = string
   # sensitive   = true
-  default = "184.64.110.136"
+  default = "184.64.114.95"
 }
 
 

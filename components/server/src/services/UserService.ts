@@ -1,10 +1,10 @@
 import { Prisma, User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { exclude } from "../util/db";
-import TokenService from "./TokenService";
-import { Context } from "../server";
-import { RequestError } from "../util/errors";
 import { Auth } from "../generated/graphql";
+import { Context } from "../server";
+import { exclude } from "../util/db";
+import { RequestError } from "../util/errors";
+import TokenService from "./TokenService";
 const tokenService = new TokenService();
 
 export const login = async (data: { email: string; password: string; context: Context }) => {

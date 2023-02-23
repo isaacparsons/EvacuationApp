@@ -8,11 +8,11 @@ import {
   User
 } from "@prisma/client";
 
+import { GroupNotificationSetting } from "../generated/graphql";
+import { Context } from "../server";
 import EmailService from "./EmailService";
 import PushNotificationService from "./PushNotificationService";
 import TokenService from "./TokenService";
-import { GroupNotificationSetting } from "../generated/graphql";
-import { Context } from "../server";
 
 interface SendAlertNotifications {
   db: PrismaClient;
@@ -192,9 +192,9 @@ export const sendPasswordResetNotification = async (user: User) => {
 export const sendCompleteSignupNotifications = async (data: {
   context: Context;
   organizationId: number;
-  members: (OrganizationMember & {
+  members: Array<OrganizationMember & {
     user: User;
-  })[];
+  }>;
 }) => {
   const { members, organizationId, context } = data;
 

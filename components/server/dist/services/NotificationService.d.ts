@@ -15,8 +15,8 @@ export declare const sendPasswordResetNotification: (user: User) => Promise<void
 export declare const sendCompleteSignupNotifications: (data: {
     context: Context;
     organizationId: number;
-    members: (OrganizationMember & {
+    members: Array<OrganizationMember & {
         user: User;
-    })[];
+    }>;
 }) => Promise<void>;
 export {};

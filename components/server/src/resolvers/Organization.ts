@@ -7,19 +7,20 @@ import {
   createOrganizationAnnouncement,
   deleteOrganization,
   deleteOrganizationAnnouncement,
+  getAnnouncements,
   getOrganization,
+  getOrganizationForUser,
   getOrganizationMembers,
   getOrganizationsForUser,
   inviteToOrganization,
   removeFromOrganization,
-  updateOrgInvite,
-  getOrganizationForUser,
   updateOrganizationNotificationOptions,
-  getAnnouncements
+  updateOrgInvite
 } from "../services/OrganizationService";
 
-import { addUsersToGroups } from "../services/GroupService";
 import { Resolvers } from "../generated/graphql";
+import { addUsersToGroups } from "../services/GroupService";
+import { RequestError } from "../util/errors";
 
 const OrganizationResolver: Resolvers = {
   Query: {
@@ -97,7 +98,7 @@ const OrganizationResolver: Resolvers = {
         members: membersToEmail
       });
       if (failed.length > 0) {
-        throw new Error("failed to invite 1 or more users");
+        throw new RequestError("failed to invite 1 or more users");
       }
       return succeeded;
     },
@@ -114,7 +115,7 @@ const OrganizationResolver: Resolvers = {
         ...args
       });
       if (failed.length > 0) {
-        throw new Error("Failed to remove 1 or more members");
+        throw new RequestError("Failed to remove 1 or more members");
       }
       return succeeded;
     },

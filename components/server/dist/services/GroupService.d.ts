@@ -1,12 +1,13 @@
-import { Context } from "../server";
-import { GroupNotificationSettingInput, AddGroupUser } from "../generated/graphql";
 import { Group, GroupMember } from "@prisma/client";
+import { AddGroupUser, GroupNotificationSettingInput } from "../generated/graphql";
+import { Context } from "../server";
 export declare const getGroup: (data: {
     context: Context;
     groupId: number;
 }) => Promise<Group & {
     members: (GroupMember & {
         user: import(".prisma/client").User;
+        organizationMember: import(".prisma/client").OrganizationMember;
     })[];
     evacuationEvents: (import(".prisma/client").EvacuationEvent & {
         responses: (import(".prisma/client").EvacuationResponse & {
@@ -21,6 +22,7 @@ export declare const getGroupForUser: (data: {
 }) => Promise<Group & {
     members: (GroupMember & {
         user: import(".prisma/client").User;
+        organizationMember: import(".prisma/client").OrganizationMember;
     })[];
     evacuationEvents: (import(".prisma/client").EvacuationEvent & {
         responses: (import(".prisma/client").EvacuationResponse & {

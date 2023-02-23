@@ -1,7 +1,7 @@
-import { Context } from "../server";
-import { User, GroupNotificationSettingInput, AddGroupUser } from "../generated/graphql";
-import { RequestError } from "../util/errors";
 import { Group, GroupMember } from "@prisma/client";
+import { AddGroupUser, GroupNotificationSettingInput, User } from "../generated/graphql";
+import { Context } from "../server";
+import { RequestError } from "../util/errors";
 
 export const getGroup = async (data: { context: Context; groupId: number }) => {
   const { context, groupId } = data;
@@ -13,7 +13,8 @@ export const getGroup = async (data: { context: Context; groupId: number }) => {
     include: {
       members: {
         include: {
-          user: true
+          user: true,
+          organizationMember: true
         }
       },
       evacuationEvents: {
@@ -52,7 +53,8 @@ export const getGroupForUser = async (data: { context: Context; groupId: number 
             include: {
               members: {
                 include: {
-                  user: true
+                  user: true,
+                  organizationMember: true
                 }
               },
               evacuationEvents: {
@@ -196,7 +198,7 @@ export const addUsersToGroups = async (data: {
                 organizationMember: {
                   connect: {
                     userId_organizationId: {
-                      userId: userId,
+                      userId,
                       organizationId
                     }
                   }

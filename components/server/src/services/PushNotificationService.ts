@@ -20,11 +20,7 @@ export default class PushNotificationService {
     this.client = new OneSignal.DefaultApi(configuration);
   }
 
-  public async sendNotifications(
-    users: User[],
-    message: string,
-    app_url?: string
-  ) {
+  public async sendNotifications(users: User[], message: string, app_url?: string) {
     const listOfIds = users.map((user) => user.id.toString());
     const notification = {
       app_id: process.env.ONESIGNAL_APP_ID as string,

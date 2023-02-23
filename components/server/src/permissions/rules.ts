@@ -1,11 +1,11 @@
 import { and, not, or, race, rule } from "graphql-shield";
+import { Context } from "../server";
 import { getGroupMemberFromEvacuationId } from "./utils/getGroupMemberFromEvacuationId";
 import { getGroupMemberFromGroupId } from "./utils/getGroupMemberFromGroupId";
 import { getOrgMemberFromAnnouncementId } from "./utils/getOrgMemberFromAnnouncementId";
 import { getOrgMemberFromEvacuationId } from "./utils/getOrgMemberFromEvacuationId";
 import { getOrgMemberFromGroupId } from "./utils/getOrgMemberFromGroupId";
 import { getOrgMemberFromOrgId } from "./utils/getOrgMemberFromOrgId";
-import { Context } from "../server";
 
 export const isAuthenticated = rule()(async (parent, args, ctx: Context, info) => {
   if (!ctx.user) {

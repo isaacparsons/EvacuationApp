@@ -1,7 +1,7 @@
+import { Resolvers } from "../generated/graphql";
 import { sendPasswordResetNotification } from "../services/NotificationService";
 import { getJoinedEntities } from "../services/UserService";
 import { deleteUser, login, resetPassword, signup, updateUser } from "../services/UserService";
-import { Resolvers } from "../generated/graphql";
 
 const AuthResolver: Resolvers = {
   Query: {

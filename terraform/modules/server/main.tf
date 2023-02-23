@@ -59,7 +59,7 @@ data "aws_ami" "ubuntu" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
-  
+
   owners = ["099720109477"]
 }
 
@@ -81,12 +81,12 @@ resource "aws_internet_gateway" "evacuation_igw" {
 }
 
 resource "aws_subnet" "public_subnet" {
-  count             = var.subnet_count.public
-  
-  vpc_id            = aws_vpc.evacuation_vpc.id
-  
-  cidr_block        = var.public_subnet_cidr_blocks[count.index]
-  
+  count = var.subnet_count.public
+
+  vpc_id = aws_vpc.evacuation_vpc.id
+
+  cidr_block = var.public_subnet_cidr_blocks[count.index]
+
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
@@ -95,12 +95,12 @@ resource "aws_subnet" "public_subnet" {
 }
 
 resource "aws_subnet" "private_subnet" {
-  count             = var.subnet_count.private
-  
-  vpc_id            = aws_vpc.evacuation_vpc.id
-  
-  cidr_block        = var.private_subnet_cidr_blocks[count.index]
-  
+  count = var.subnet_count.private
+
+  vpc_id = aws_vpc.evacuation_vpc.id
+
+  cidr_block = var.private_subnet_cidr_blocks[count.index]
+
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
@@ -118,24 +118,24 @@ resource "aws_route_table" "public_rt" {
 }
 
 resource "aws_route_table_association" "public" {
-  count          = var.subnet_count.public
-  
+  count = var.subnet_count.public
+
   route_table_id = aws_route_table.public_rt.id
-  
-  subnet_id      = 	aws_subnet.public_subnet[count.index].id
+
+  subnet_id = aws_subnet.public_subnet[count.index].id
 }
 
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.evacuation_vpc.id
-  
+
 }
 
 resource "aws_route_table_association" "private" {
-  count          = var.subnet_count.private
-  
+  count = var.subnet_count.private
+
   route_table_id = aws_route_table.private_rt.id
-  
-  subnet_id      = aws_subnet.private_subnet[count.index].id
+
+  subnet_id = aws_subnet.private_subnet[count.index].id
 }
 
 resource "aws_security_group" "backend_sg" {
@@ -151,7 +151,7 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-    ingress {
+  ingress {
     description = "Allow all traffic through HTTP to port 4000"
     from_port   = "4000"
     to_port     = "4000"
@@ -159,7 +159,7 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-    ingress {
+  ingress {
     description = "Allow all traffic through HTTP to port 3000"
     from_port   = "3000"
     to_port     = "3000"
@@ -167,7 +167,7 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-    ingress {
+  ingress {
     description = "Allow all traffic through HTTPs"
     from_port   = "443"
     to_port     = "443"
@@ -183,7 +183,7 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = ["${var.my_ip}/32"]
   }
 
-    ingress {
+  ingress {
     description = "Allow SSH from my computer"
     from_port   = "22"
     to_port     = "22"
@@ -191,7 +191,7 @@ resource "aws_security_group" "backend_sg" {
     cidr_blocks = ["75.155.25.250/32"]
   }
 
- 
+
 
   egress {
     description = "Allow all outbound traffic"
@@ -228,8 +228,8 @@ resource "aws_db_subnet_group" "db_subnet_group" {
   // The name and description of the db subnet group
   name        = "db_subnet_group"
   description = "DB subnet group"
-  
-  subnet_ids  = [for subnet in aws_subnet.private_subnet : subnet.id]
+
+  subnet_ids = [for subnet in aws_subnet.private_subnet : subnet.id]
 }
 
 resource "aws_db_instance" "database" {
@@ -250,10 +250,86 @@ resource "aws_key_pair" "tutorial_kp" {
   public_key = file("${path.module}/tutorial_kp.pub")
 }
 
+data "aws_iam_policy_document" "cloudwatch_agent_iam_policy_document" {
+  statement {
+    actions = [
+      "cloudwatch:PutMetricData",
+      "ec2:DescribeVolumes",
+      "ec2:DescribeTags",
+      "logs:PutLogEvents",
+      "logs:DescribeLogStreams",
+      "logs:DescribeLogGroups",
+      "logs:CreateLogStream",
+      "logs:CreateLogGroup"
+    ]
+    resources = [
+      "*"
+    ]
+    effect = "Allow"
+  }
+
+  statement {
+    sid = "allowListBucket"
+    actions = [
+      "ssm:GetParameter"
+    ]
+    resources = [
+      "arn:aws:ssm:*:*:parameter/AmazonCloudWatch-*"
+    ]
+    effect = "Allow"
+  }
+
+}
+
+resource "aws_iam_policy" "cloudwatch_agent_iam_policy" {
+  name        = "cloudwatchAgentIamPolicy"
+  description = "access to cloudwatch"
+
+  policy = data.aws_iam_policy_document.cloudwatch_agent_iam_policy_document.json
+}
+
+resource "aws_iam_role" "cloudwatch_agent_iam_role" {
+  name        = "CloudWatchAgentServerRole1"
+  description = "access to cloudwatch"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent_iam_role_policy_attachment" {
+  role       = aws_iam_role.cloudwatch_agent_iam_role.name
+  policy_arn = aws_iam_policy.cloudwatch_agent_iam_policy.arn
+}
+
+
+data "template_file" "user_data" {
+  template = file("${path.module}/userdata.sh.tpl")
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "ec2_profile"
+  role = aws_iam_role.cloudwatch_agent_iam_role.name
+}
+
 resource "aws_instance" "backend" {
-  count                  = var.settings.backend.count
-  ami                    = data.aws_ami.ubuntu.id
-  
+  count = var.settings.backend.count
+  ami   = data.aws_ami.ubuntu.id
+
+  user_data = data.template_file.user_data.rendered
+
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+
   instance_type          = var.settings.backend.instance_type
   subnet_id              = aws_subnet.public_subnet[count.index].id
   key_name               = aws_key_pair.tutorial_kp.key_name
@@ -265,11 +341,11 @@ resource "aws_instance" "backend" {
 }
 
 resource "aws_eip" "backend_eip" {
-  count    = var.settings.backend.count
+  count = var.settings.backend.count
 
   instance = aws_instance.backend[count.index].id
 
-  vpc      = true
+  vpc = true
 
   tags = {
     Name = "backend_eip_${count.index}"

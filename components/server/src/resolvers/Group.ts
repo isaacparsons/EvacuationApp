@@ -7,9 +7,9 @@ import {
   removeMembers,
   updateGroupNotificationOptions
 } from "../services/GroupService";
-import { getGroupForUser, updateGroupMember, getGroupMembers } from "../services/GroupService";
+import { getGroupForUser, getGroupMembers, updateGroupMember } from "../services/GroupService";
 
-import { Resolvers, GroupNotificationSetting } from "../generated/graphql";
+import { GroupNotificationSetting, Resolvers } from "../generated/graphql";
 
 const GroupResolver: Resolvers = {
   Query: {

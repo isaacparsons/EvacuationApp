@@ -14,16 +14,10 @@ provider "aws" {
 }
 
 
-# module "push_notifications" {
-#   source = "./modules/pushNotifications"
-  
-# }
-
-# module "email" {
-#   source = "./modules/email"
-#   region = var.aws_region
-# }
-
 module "server" {
   source = "./modules/server"
 }
+
+# module "frontend" {
+#   source = "./modules/frontend"
+# }

@@ -1,14 +1,14 @@
 import { makeExecutableSchema } from "@graphql-tools/schema";
-import { readFileSync } from "fs";
 import { User } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
+import { ApolloServer } from "apollo-server";
+import { readFileSync } from "fs";
 import { applyMiddleware } from "graphql-middleware";
+import logger from "./config/logger";
 import { resolvers } from "./graphql/resolver";
 import { permissions } from "./permissions/index";
 import { GraphQLErrorsHandler } from "./plugins/error";
 import TokenService from "./services/TokenService";
-import logger from "./config/logger";
-import { ApolloServer } from "apollo-server";
 
 const tokenService = new TokenService();
 
