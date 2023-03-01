@@ -16,6 +16,15 @@ export const USER2 = {
   password: "123"
 };
 
+export const USER3 = {
+  firstName: "test",
+  lastName: "3",
+  email: "test3@email.com",
+  phoneNumber: "4031234569",
+  accountCreated: true,
+  password: "123"
+};
+
 export const ORG_NOTIFICATION_SETTINGS = {
   emailEnabled: false,
   pushEnabled: false,

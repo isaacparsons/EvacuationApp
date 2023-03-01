@@ -111,7 +111,8 @@ export const getOrganizationForUser = async (data: {
     include: {
       groups: {
         include: {
-          group: true
+          group: true,
+          organizationMember: true
         }
       }
     }

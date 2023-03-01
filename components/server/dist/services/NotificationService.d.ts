@@ -4,6 +4,9 @@ interface SendAlertNotifications {
     db: PrismaClient;
     evacuationEvent: EvacuationEvent;
 }
+export declare const getAcceptedGroupMembers: (db: PrismaClient, groupId: number) => Promise<(import(".prisma/client").Group & {
+    members: import(".prisma/client").GroupMember[];
+})[]>;
 export declare const sendAnnouncementNotification: (data: {
     db: PrismaClient;
     announcement: Announcement;

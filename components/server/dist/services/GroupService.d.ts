@@ -5,6 +5,7 @@ export declare const getGroup: (data: {
     context: Context;
     groupId: number;
 }) => Promise<Group & {
+    notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
     members: (GroupMember & {
         user: import(".prisma/client").User;
         organizationMember: import(".prisma/client").OrganizationMember;
@@ -14,7 +15,6 @@ export declare const getGroup: (data: {
             user: import(".prisma/client").User;
         })[];
     })[];
-    notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
 }>;
 export declare const getGroupForUser: (data: {
     context: Context;
@@ -47,8 +47,8 @@ export declare const createGroup: (data: {
     organizationId: number;
     groupNotificationSetting: GroupNotificationSettingInput;
 }) => Promise<Group & {
-    members: GroupMember[];
     notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
+    members: GroupMember[];
 }>;
 export declare const deleteGroup: (data: {
     context: Context;

@@ -10,12 +10,16 @@ import {
   USER2
 } from "../dev/testData";
 import { server } from "../server";
+import { INVITE_TO_ORG, REMOVE_FROM_ORG, UPDATE_ORG_INVITE } from "../dev/gql/organizations";
+import Mailhog from "../dev/Mailhog";
 
 const prisma = new PrismaClient();
+const mailhog = new Mailhog();
 
 describe("organization tests", () => {
   beforeEach(async () => {
     await deleteDb();
+    await mailhog.deleteAllEmails();
   });
 
   describe("create org", () => {
@@ -159,11 +163,10 @@ describe("organization tests", () => {
   });
 
   describe("invite users", () => {
-    it("should invite users to org if user is admin", async () => {
+    it("should invite users to org if user is admin and send complete signup email", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: invitedUser, token: invitedUserToken } = await setupUser(USER2);
 
-      const users = [{ admin: false, email: invitedUser.email }];
+      const users = [{ admin: false, email: USER2.email }];
 
       const org = await prisma.organization.create({
         data: {
@@ -184,35 +187,46 @@ describe("organization tests", () => {
 
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation InviteToOrganization(
-              $organizationId: Int!
-              $users: [InvitedOrganizationUser]
-            ) {
-              inviteToOrganization(organizationId: $organizationId, users: $users) {
-                id
-                userId
-                organizationId
-              }
-            }
-          `,
+          query: INVITE_TO_ORG,
           variables: { organizationId: org.id, users }
         },
         {
           req: { headers: { authorization: `Bearer ${adminUserToken}` } }
         } as any
       );
+      const invitedUser = await prisma.user.findUnique({
+        where: {
+          email: USER2.email
+        }
+      });
       const invitedOrgMember = await prisma.organizationMember.findUnique({
         where: {
           userId_organizationId: {
-            userId: invitedUser.id,
+            userId: invitedUser?.id!,
             organizationId: org.id
           }
         }
       });
+      const emails = await mailhog.getEmails();
+
+      const email = emails[0];
+      const recepients = mailhog.getRecepients(email);
+      expect(mailhog.getSender(email)).toEqual(process.env.EMAIL);
+      expect(recepients[0]).toEqual(USER2.email);
+      expect(recepients.length).toEqual(1);
+      expect(email.Content.Headers.Subject[0]).toEqual("Complete Signup");
+      expect(invitedUser).toEqual({
+        id: expect.any(Number),
+        email: USER2.email,
+        firstName: null,
+        lastName: null,
+        phoneNumber: null,
+        passwordHash: null,
+        accountCreated: false
+      });
       expect(invitedOrgMember).toEqual({
         id: expect.any(Number),
-        userId: invitedUser.id,
+        userId: invitedUser?.id,
         organizationId: org.id,
         status: "pending",
         admin: false
@@ -243,18 +257,7 @@ describe("organization tests", () => {
 
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation InviteToOrganization(
-              $organizationId: Int!
-              $users: [InvitedOrganizationUser]
-            ) {
-              inviteToOrganization(organizationId: $organizationId, users: $users) {
-                id
-                userId
-                organizationId
-              }
-            }
-          `,
+          query: INVITE_TO_ORG,
           variables: { organizationId: org.id, users }
         },
         {
@@ -308,20 +311,7 @@ describe("organization tests", () => {
       });
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation RemoveFromOrganization($organizationId: Int!, $userIds: [Int]) {
-              removeFromOrganization(organizationId: $organizationId, userIds: $userIds) {
-                id
-                organizationId
-                user {
-                  email
-                  firstName
-                  id
-                  lastName
-                }
-              }
-            }
-          `,
+          query: REMOVE_FROM_ORG,
           variables: { organizationId: org.id, userIds: [memberUser.id] }
         },
         {
@@ -374,20 +364,7 @@ describe("organization tests", () => {
       });
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation RemoveFromOrganization($organizationId: Int!, $userIds: [Int]) {
-              removeFromOrganization(organizationId: $organizationId, userIds: $userIds) {
-                id
-                organizationId
-                user {
-                  email
-                  firstName
-                  id
-                  lastName
-                }
-              }
-            }
-          `,
+          query: REMOVE_FROM_ORG,
           variables: { organizationId: org.id, userIds: [adminUser.id] }
         },
         {
@@ -429,17 +406,7 @@ describe("organization tests", () => {
 
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation UpdateOrgInvite($organizationId: Int!, $status: String!) {
-              updateOrgInvite(organizationId: $organizationId, status: $status) {
-                id
-                userId
-                organizationId
-                status
-                admin
-              }
-            }
-          `,
+          query: UPDATE_ORG_INVITE,
           variables: { organizationId: org.id, status: "accepted" }
         },
         {

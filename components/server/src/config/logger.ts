@@ -1,7 +1,15 @@
 import bunyan from "bunyan";
 import path from "path";
 
+const mockLogger = {
+  error: () => {},
+  info: () => {}
+};
+
 const logger = (name: string, options?: any) => {
+  if (process.env.NODE_ENV) {
+    return mockLogger;
+  }
   const logPath = path.join(__dirname, "../../logs/logs.log");
   return bunyan.createLogger({
     name,

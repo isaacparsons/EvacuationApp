@@ -20,14 +20,17 @@ export const login = async (data: { email: string; password: string; context: Co
   if (!user) {
     throw new RequestError(`No user found with email: ${email}`);
   }
+  if (!user.accountCreated) {
+    throw new RequestError(`Account has not been setup, go to signup to complete`);
+  }
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
-    throw new RequestError("Invalid password");
+    throw new RequestError("Password is incorrect");
   }
   const userWithoutPassword = exclude<User, "passwordHash">(user, "passwordHash");
   return {
     token: tokenService.create(user),
-    user
+    user: userWithoutPassword
   };
 };
 
@@ -50,7 +53,7 @@ export const signup = async (data: {
     }
   });
   if (existingUser && existingUser.accountCreated) {
-    throw new RequestError("An account with this email/phone number already exists");
+    throw new RequestError("An account with this email already exists");
   }
 
   try {
@@ -82,7 +85,7 @@ export const signup = async (data: {
     const userWithoutPassword = exclude<User, "passwordHash">(user, "passwordHash");
     return {
       token: tokenService.create(user),
-      user
+      user: userWithoutPassword
     };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -151,6 +154,9 @@ export const resetPassword = async (data: { context: Context; email: string }) =
   });
   if (!user) {
     throw new RequestError(`No user found for email: ${email}`);
+  }
+  if (!user.accountCreated) {
+    throw new RequestError(`Account has not been setup, go to signup to complete`);
   }
   const userWithoutPassword = exclude<User, "passwordHash">(user, "passwordHash");
   return user;

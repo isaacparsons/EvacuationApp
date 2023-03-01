@@ -8,8 +8,8 @@ export declare const login: (data: {
 }) => Promise<{
     token: string;
     user: User & {
-        groups: import(".prisma/client").GroupMember[];
         organizations: import(".prisma/client").OrganizationMember[];
+        groups: import(".prisma/client").GroupMember[];
     };
 }>;
 export declare const signup: (data: {
@@ -37,10 +37,10 @@ export declare const resetPassword: (data: {
 export declare const getJoinedEntities: (data: {
     context: Context;
 }) => Promise<(User & {
-    groups: (import(".prisma/client").GroupMember & {
-        group: import(".prisma/client").Group;
-    })[];
     organizations: (import(".prisma/client").OrganizationMember & {
         organization: import(".prisma/client").Organization;
+    })[];
+    groups: (import(".prisma/client").GroupMember & {
+        group: import(".prisma/client").Group;
     })[];
 }) | null>;

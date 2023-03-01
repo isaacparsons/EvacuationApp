@@ -1,19 +1,32 @@
 import { Organization, User } from "@prisma/client";
 import nodemailer from "nodemailer";
 import TokenService from "./TokenService";
+import Mailhog from "../dev/Mailhog";
+
+const transportOptions = () => {
+  if (process.env.NODE_ENV === "test") {
+    const mailhog = new Mailhog();
+    return {
+      host: mailhog.HOST,
+      port: mailhog.SMTP_SERVER
+    };
+  }
+  return {
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  };
+};
 
 export default class EmailService {
   public transporter: any;
   public tokenService: TokenService;
   constructor() {
     this.tokenService = new TokenService();
-    this.transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
+    const options = transportOptions();
+    this.transporter = nodemailer.createTransport(options);
   }
 
   public sendEmail = async (users: User[], subject: string, message: string, link?: string) => {

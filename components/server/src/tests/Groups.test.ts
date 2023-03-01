@@ -1,19 +1,23 @@
 import { PrismaClient } from "@prisma/client";
-import { gql } from "apollo-server";
-import { createGroup, createOrg, deleteDb, setupUser } from "../dev/dbUtil";
 import {
-  GROUP,
-  GROUP_ADMIN_MEMBER,
-  GROUP_NON_ADMIN_MEMBER,
-  GROUP_NOTIFICATION_SETTING,
-  ORG,
-  ORG_ADMIN_MEMBER,
-  ORG_NON_ADMIN_MEMBER,
-  ORG_NOTIFICATION_SETTINGS,
-  USER1,
-  USER2
-} from "../dev/testData";
+  createAdminGroupMember,
+  createAdminOrgMember,
+  createGroup,
+  createNonAdminGroupMember,
+  createNonAdminOrgMember,
+  deleteDb,
+  setupUser
+} from "../dev/dbUtil";
+import { GROUP, GROUP_NOTIFICATION_SETTING, USER1, USER2 } from "../dev/testData";
 import { server } from "../server";
+import { createOrg } from "../dev/dbUtil";
+import { GET_ORGANIZATION, GET_ORGANIZATION_FOR_USER } from "../dev/gql/organizations";
+import {
+  CREATE_GROUP,
+  ADD_USERS_TO_GROUP,
+  REMOVE_USERS,
+  UPDATE_NOTIFICATION_SETTINGS
+} from "../dev/gql/groups";
 
 const prisma = new PrismaClient();
 
@@ -24,61 +28,14 @@ describe("group tests", () => {
 
   describe("Create group", () => {
     it("org admin should be able to create a group in an organization", async () => {
-      const users = await prisma.user.findMany({});
       const { user, token } = await setupUser(USER1);
 
-      const org = await prisma.organization.create({
-        data: {
-          ...ORG,
-          notificationSetting: {
-            create: ORG_NOTIFICATION_SETTINGS
-          },
-          members: {
-            create: {
-              user: {
-                connect: { id: user.id }
-              },
-              ...ORG_ADMIN_MEMBER
-            }
-          }
-        },
-        include: {
-          members: true
-        }
-      });
+      const org = await createOrg(prisma);
+      const adminOrgMember = await createAdminOrgMember(prisma, user, org);
+
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation CreateGroup(
-              $organizationId: Int!
-              $name: String!
-              $groupNotificationSetting: GroupNotificationSettingInput!
-            ) {
-              createGroup(
-                organizationId: $organizationId
-                name: $name
-                groupNotificationSetting: $groupNotificationSetting
-              ) {
-                id
-                organizationId
-                name
-                members {
-                  id
-                  userId
-                  groupId
-                  status
-                  admin
-                }
-                notificationSetting {
-                  id
-                  emailEnabled
-                  groupId
-                  pushEnabled
-                  smsEnabled
-                }
-              }
-            }
-          `,
+          query: CREATE_GROUP,
           variables: {
             name: GROUP.name,
             groupNotificationSetting: GROUP_NOTIFICATION_SETTING,
@@ -87,88 +44,45 @@ describe("group tests", () => {
         },
         { req: { headers: { authorization: `Bearer ${token}` } } } as any
       );
-      const group = result.data?.createGroup;
-      expect(group).toEqual({
+      const groupInDb = await prisma.group.findFirst({
+        where: {
+          organizationId: org.id,
+          name: GROUP.name
+        },
+        include: {
+          notificationSetting: true,
+          members: true
+        }
+      });
+      expect(groupInDb).toEqual({
         ...GROUP,
         id: expect.any(Number),
         organizationId: org.id,
-
-        members: [
-          {
-            ...GROUP_ADMIN_MEMBER,
-            id: expect.any(Number),
-            userId: user.id,
-            groupId: group.id
-          }
-        ],
         notificationSetting: {
           id: expect.any(Number),
-          groupId: group.id,
+          groupId: groupInDb?.id,
           ...GROUP_NOTIFICATION_SETTING
-        }
+        },
+        members: [
+          {
+            id: expect.any(Number),
+            userId: user.id,
+            groupId: groupInDb?.id,
+            organizationMemberId: adminOrgMember.id,
+            admin: true
+          }
+        ]
       });
     });
     it("non org admin should not be able to create a group in an organization", async () => {
       const adminUser = await setupUser(USER1);
       const nonAdminUser = await setupUser(USER2);
-      const org = await prisma.organization.create({
-        data: {
-          ...ORG,
-          notificationSetting: {
-            create: ORG_NOTIFICATION_SETTINGS
-          },
-          members: {
-            createMany: {
-              data: [
-                {
-                  userId: adminUser.user.id,
-                  ...ORG_ADMIN_MEMBER
-                },
-                {
-                  userId: nonAdminUser.user.id,
-                  ...ORG_NON_ADMIN_MEMBER
-                }
-              ]
-            }
-          }
-        },
-        include: {
-          members: true
-        }
-      });
+      const org = await createOrg(prisma);
+      const adminOrgMember = await createAdminOrgMember(prisma, adminUser.user, org);
+      const nonAdminOrgMember = await createNonAdminOrgMember(prisma, nonAdminUser.user, org);
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation CreateGroup(
-              $organizationId: Int!
-              $name: String!
-              $groupNotificationSetting: GroupNotificationSettingInput!
-            ) {
-              createGroup(
-                organizationId: $organizationId
-                name: $name
-                groupNotificationSetting: $groupNotificationSetting
-              ) {
-                id
-                organizationId
-                name
-                members {
-                  id
-                  userId
-                  groupId
-                  status
-                  admin
-                }
-                notificationSetting {
-                  id
-                  emailEnabled
-                  groupId
-                  pushEnabled
-                  smsEnabled
-                }
-              }
-            }
-          `,
+          query: CREATE_GROUP,
           variables: {
             name: GROUP.name,
             groupNotificationSetting: GROUP_NOTIFICATION_SETTING,
@@ -183,82 +97,24 @@ describe("group tests", () => {
       expect(result.errors?.[0]?.message).toEqual("Not Authorised!");
     });
   });
-  describe("Invite users", () => {
-    it("org admin should be able to invite users to a group", async () => {
+  describe("Add users to group", () => {
+    it("org admin should be able to add users to a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2, token: token2 } = await setupUser(USER2);
-      const org = await prisma.organization.create({
-        data: {
-          ...ORG,
-          notificationSetting: {
-            create: ORG_NOTIFICATION_SETTINGS
-          },
-          members: {
-            create: {
-              user: {
-                connect: { id: user1.id }
-              },
-              ...ORG_ADMIN_MEMBER
-            }
-          }
-        },
-        include: {
-          members: true
-        }
-      });
-      const group = await prisma.group.create({
-        data: {
-          name: GROUP.name,
-          organizationId: org.id,
-          members: {
-            create: {
-              organizationMember: {
-                connect: {
-                  userId_organizationId: {
-                    userId: user1.id,
-                    organizationId: org.id
-                  }
-                }
-              },
-              admin: true,
-              user: {
-                connect: { id: user1.id }
-              }
-            }
-          },
-
-          notificationSetting: {
-            create: GROUP_NOTIFICATION_SETTING
-          }
-        },
-        include: {
-          members: true,
-          notificationSetting: true
-        }
-      });
+      const org = await createOrg(prisma);
+      const orgAdminMember = await createAdminOrgMember(prisma, user1, org);
+      const invitedOrgMember = await createNonAdminOrgMember(prisma, user2, org);
+      const group = await createGroup({ db: prisma, org });
+      const nonAdminGroupMember1 = await createNonAdminGroupMember(prisma, user1, org, group);
+      const nonAdminGroupMember2 = await createNonAdminGroupMember(prisma, user2, org, group);
       const result = await server.executeOperation(
         {
-          query: gql`
-            mutation InviteUsers($groupId: Int!, $users: [InvitedGroupUser]) {
-              inviteUsers(groupId: $groupId, users: $users) {
-                userId
-                groupId
-                status
-                admin
-                user {
-                  id
-                  email
-                  phoneNumber
-                  accountCreated
-                }
-              }
-            }
-          `,
+          query: ADD_USERS_TO_GROUP,
           variables: {
             groupId: group.id,
             users: [
               {
-                email: user2.email,
+                userId: user2.id,
                 admin: false
               }
             ]
@@ -266,53 +122,362 @@ describe("group tests", () => {
         },
         { req: { headers: { authorization: `Bearer ${token1}` } } } as any
       );
-      expect(result.data?.inviteUsers).toEqual([
-        {
-          admin: false,
+      const groupMemberInDb = await prisma.groupMember.findFirst({
+        where: {
           groupId: group.id,
-          status: "pending",
-          user: {
-            accountCreated: true,
-            email: USER2.email,
-            id: user2.id,
-            phoneNumber: USER2.phoneNumber
-          },
           userId: user2.id
+        }
+      });
+      expect(groupMemberInDb).toEqual({
+        id: expect.any(Number),
+        userId: user2.id,
+        groupId: group.id,
+        organizationMemberId: invitedOrgMember.id,
+        admin: false
+      });
+    });
+    it("group admin should be able to add users to a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const { user: user2, token: token2 } = await setupUser(USER2);
+      const org = await createOrg(prisma);
+      const adminOrgMember = await createAdminOrgMember(prisma, user1, org);
+      const invitedOrgMember = await createNonAdminOrgMember(prisma, user2, org);
+      const group = await createGroup({ db: prisma, org });
+      const adminGroupMember = await createAdminGroupMember(prisma, user1, org, group);
+      const result = await server.executeOperation(
+        {
+          query: ADD_USERS_TO_GROUP,
+          variables: {
+            groupId: group.id,
+            users: [
+              {
+                userId: user2.id,
+                admin: false
+              }
+            ]
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupMemberInDb = await prisma.groupMember.findFirst({
+        where: {
+          groupId: group.id,
+          userId: user2.id
+        }
+      });
+      expect(groupMemberInDb).toEqual({
+        id: expect.any(Number),
+        userId: user2.id,
+        groupId: group.id,
+        organizationMemberId: invitedOrgMember.id,
+        admin: false
+      });
+    });
+    it("non org/group admin should not be able to add users to a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const { user: user2, token: token2 } = await setupUser(USER2);
+      const org = await createOrg(prisma);
+      const nonAdminOrgMember1 = await createNonAdminOrgMember(prisma, user1, org);
+      const nonAdminOrgMember2 = await createNonAdminOrgMember(prisma, user2, org);
+
+      const group = await createGroup({ db: prisma, org });
+      const nonAdminGroupMember1 = await createNonAdminGroupMember(prisma, user1, org, group);
+      const result = await server.executeOperation(
+        {
+          query: ADD_USERS_TO_GROUP,
+          variables: {
+            groupId: group.id,
+            users: [
+              {
+                userId: user2.id,
+                admin: false
+              }
+            ]
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupMemberInDb = await prisma.groupMember.findFirst({
+        where: {
+          groupId: group.id,
+          userId: user2.id
+        }
+      });
+      expect(result.errors?.length).toEqual(1);
+      expect(result.errors?.[0]?.message).toEqual("Not Authorised!");
+      expect(groupMemberInDb).toBeNull();
+    });
+  });
+  describe("Remove users", () => {
+    it("org admin should be able to remove users from a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const { user: user2, token: token2 } = await setupUser(USER2);
+      const org = await createOrg(prisma);
+      const adminOrgMember = await createAdminOrgMember(prisma, user1, org);
+      const nonAdminOrgMember = await createNonAdminOrgMember(prisma, user2, org);
+
+      const group = await createGroup({ db: prisma, org });
+
+      const nonAdminGroupMember1 = await createNonAdminGroupMember(prisma, user1, org, group);
+      const nonAdminGroupMember2 = await createNonAdminGroupMember(prisma, user2, org, group);
+      const result = await server.executeOperation(
+        {
+          query: REMOVE_USERS,
+          variables: {
+            groupId: group.id,
+            userIds: [user2.id]
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupMemberInDb = await prisma.groupMember.findFirst({
+        where: {
+          groupId: group.id,
+          userId: user2.id
+        }
+      });
+      expect(groupMemberInDb).toBeNull();
+    });
+    it("group admin should be able to remove users from a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const { user: user2, token: token2 } = await setupUser(USER2);
+      const org = await createOrg(prisma);
+      const nonAdminOrgMember1 = await createNonAdminOrgMember(prisma, user1, org);
+      const nonAdminOrgMember2 = await createNonAdminOrgMember(prisma, user2, org);
+
+      const group = await createGroup({ db: prisma, org });
+
+      const adminGroupMember1 = await createAdminGroupMember(prisma, user1, org, group);
+      const nonAdminGroupMember2 = await createNonAdminGroupMember(prisma, user2, org, group);
+      const result = await server.executeOperation(
+        {
+          query: REMOVE_USERS,
+          variables: {
+            groupId: group.id,
+            userIds: [user2.id]
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupMemberInDb = await prisma.groupMember.findFirst({
+        where: {
+          groupId: group.id,
+          userId: user2.id
+        }
+      });
+      expect(groupMemberInDb).toBeNull();
+    });
+    it("non org/group admin should not be able to remove users from a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const { user: user2, token: token2 } = await setupUser(USER2);
+      const org = await createOrg(prisma);
+      const nonAdminOrgMember1 = await createNonAdminOrgMember(prisma, user1, org);
+      const nonAdminOrgMember2 = await createNonAdminOrgMember(prisma, user2, org);
+
+      const group = await createGroup({ db: prisma, org });
+
+      const nonAdminGroupMember1 = await createNonAdminGroupMember(prisma, user1, org, group);
+      const nonAdminGroupMember2 = await createNonAdminGroupMember(prisma, user2, org, group);
+      const result = await server.executeOperation(
+        {
+          query: REMOVE_USERS,
+          variables: {
+            groupId: group.id,
+            userIds: [user2.id]
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupMemberInDb = await prisma.groupMember.findFirst({
+        where: {
+          groupId: group.id,
+          userId: user2.id
+        }
+      });
+      expect(result.errors?.length).toEqual(1);
+      expect(result.errors?.[0]?.message).toEqual("Not Authorised!");
+      expect(groupMemberInDb).toBeDefined();
+    });
+  });
+  describe("Update notification settings", () => {
+    it("org admin should be able to update notification settings for a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const org = await createOrg(prisma);
+      const adminOrgMember = await createAdminOrgMember(prisma, user1, org);
+
+      const group = await createGroup({ db: prisma, org });
+
+      const nonAdminGroupMember1 = await createNonAdminGroupMember(prisma, user1, org, group);
+      const updatedGroupNotificationSettings = {
+        emailEnabled: true,
+        smsEnabled: true,
+        pushEnabled: true
+      };
+      const result = await server.executeOperation(
+        {
+          query: UPDATE_NOTIFICATION_SETTINGS,
+          variables: {
+            groupId: group.id,
+            groupNotificationSetting: updatedGroupNotificationSettings
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupNotificationSettingsInDb = await prisma.groupNotificationSetting.findFirst({
+        where: {
+          groupId: group.id
+        }
+      });
+      expect(groupNotificationSettingsInDb).toEqual({
+        id: expect.any(Number),
+        groupId: group.id,
+        ...updatedGroupNotificationSettings
+      });
+    });
+    it("group admin should be able to update notification settings for a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const org = await createOrg(prisma);
+      const nonAdminOrgMember = await createNonAdminOrgMember(prisma, user1, org);
+
+      const group = await createGroup({ db: prisma, org });
+
+      const adminGroupMember1 = await createAdminGroupMember(prisma, user1, org, group);
+      const updatedGroupNotificationSettings = {
+        emailEnabled: true,
+        smsEnabled: true,
+        pushEnabled: true
+      };
+      const result = await server.executeOperation(
+        {
+          query: UPDATE_NOTIFICATION_SETTINGS,
+          variables: {
+            groupId: group.id,
+            groupNotificationSetting: updatedGroupNotificationSettings
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupNotificationSettingsInDb = await prisma.groupNotificationSetting.findFirst({
+        where: {
+          groupId: group.id
+        }
+      });
+      expect(groupNotificationSettingsInDb).toEqual({
+        id: expect.any(Number),
+        groupId: group.id,
+        ...updatedGroupNotificationSettings
+      });
+    });
+    it("non group/org admin should not be able to update notification settings for a group", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const org = await createOrg(prisma);
+      const nonAdminOrgMember = await createNonAdminOrgMember(prisma, user1, org);
+
+      const group = await createGroup({ db: prisma, org });
+
+      const adminGroupMember1 = await createNonAdminGroupMember(prisma, user1, org, group);
+      const updatedGroupNotificationSettings = {
+        emailEnabled: true,
+        smsEnabled: true,
+        pushEnabled: true
+      };
+      const result = await server.executeOperation(
+        {
+          query: UPDATE_NOTIFICATION_SETTINGS,
+          variables: {
+            groupId: group.id,
+            groupNotificationSetting: updatedGroupNotificationSettings
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      const groupNotificationSettingsInDb = await prisma.groupNotificationSetting.findFirst({
+        where: {
+          groupId: group.id
+        }
+      });
+      expect(result.errors?.length).toEqual(1);
+      expect(result.errors?.[0]?.message).toEqual("Not Authorised!");
+      expect(groupNotificationSettingsInDb).toEqual({
+        id: expect.any(Number),
+        groupId: group.id,
+        ...GROUP_NOTIFICATION_SETTING
+      });
+    });
+  });
+  describe("get groups for org admin", () => {
+    it("should get groups created by them and group created by other users", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const org = await createOrg(prisma);
+      const adminOrgMember = await createAdminOrgMember(prisma, user1, org);
+
+      const group1 = await createGroup({ db: prisma, org, groupName: "test group 1" });
+      const group2 = await createGroup({ db: prisma, org, groupName: "test group 2" });
+
+      const result = await server.executeOperation(
+        {
+          query: GET_ORGANIZATION,
+          variables: {
+            organizationId: org.id
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      expect(result?.data?.getOrganization?.groups).toEqual([
+        {
+          organizationId: org.id,
+          id: expect.any(Number),
+          name: group1.name
+        },
+        {
+          organizationId: org.id,
+          id: expect.any(Number),
+          name: group2.name
         }
       ]);
     });
-    // it('group admin should be able to invite users to a group', async () => {})
-    // it('non org/group admin should not be able to invite users to a group', async () => {})
   });
-  // describe("Remove users", () => {
-  //   it('org admin should be able to remove users from a group', async () => {})
-  //   it('group admin should be able to remove users from a group', async () => {})
-  //   it('non org/group admin should not be able to remove users from a group', async () => {})
-  // })
-  // describe("Update notification settings", () => {
-  //   it('org admin should be able to update notification settings for a group', async () => {})
-  //   it('group admin should be able to update notification settings for a group', async () => {})
-  //   it('non group/org admin should not be able to update notification settings for a group', async () => {})
-  // })
-  // describe("get groups for org admin", () => {
-  //   it('should get groups created by them and group created by other user', async () => {})
-  // })
-  // describe("get groups for org non admin", () => {
-  //   it('should get group they are member of and not get group they are not member of', async () => {})
-  // })
+  describe("get groups for org non admin", () => {
+    it("should get group they are member of and not get group they are not a member of", async () => {
+      const { user: user1, token: token1 } = await setupUser(USER1);
+      const org = await createOrg(prisma);
+      const nonAdminOrgMember = await createNonAdminOrgMember(prisma, user1, org);
+
+      const group1 = await createGroup({ db: prisma, org, groupName: "test group 1" });
+      const group2 = await createGroup({ db: prisma, org, groupName: "test group 2" });
+
+      const adminGroupMember1 = await createAdminGroupMember(prisma, user1, org, group1);
+
+      const result = await server.executeOperation(
+        {
+          query: GET_ORGANIZATION_FOR_USER,
+          variables: {
+            organizationId: org.id
+          }
+        },
+        { req: { headers: { authorization: `Bearer ${token1}` } } } as any
+      );
+      expect(result?.data?.getOrganizationForUser?.groups).toEqual([
+        {
+          id: expect.any(Number),
+          userId: user1.id,
+          groupId: group1.id,
+          organizationMemberId: nonAdminOrgMember.id,
+          organizationMember: {
+            id: expect.any(Number),
+            status: "accepted",
+            userId: user1.id,
+            admin: false,
+            organizationId: org.id
+          },
+          admin: true,
+          group: {
+            organizationId: org.id,
+            id: expect.any(Number),
+            name: group1.name
+          }
+        }
+      ]);
+    });
+  });
 });
-
-// org admin should be able to invite users to a group
-// org admin should be able to remove users from a group
-// org admin should be able to delete group
-// org admin should be able to update notification settings
-// org admin should be able to retrieve all groups in an organization
-
-// group admin should not be able to delete group
-// group admin should be able to invite users to group
-// group admin should be able to remove users from group
-// group admin should be able to update notification settings
-
-// non org admin should not be able to invite users to a group
-// non org admin should not be able to remove users from a group
-// non org admin should be able to retrieve only groups they have joined

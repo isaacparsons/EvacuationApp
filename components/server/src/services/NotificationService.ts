@@ -32,7 +32,25 @@ const getGroup = async (db: PrismaClient, groupId: number) => {
       notificationSetting: true,
       members: {
         include: {
-          user: true
+          user: true,
+          organizationMember: true
+        }
+      }
+    }
+  });
+};
+
+export const getAcceptedGroupMembers = async (db: PrismaClient, groupId: number) => {
+  return db.group.findMany({
+    where: {
+      id: groupId
+    },
+    include: {
+      members: {
+        where: {
+          organizationMember: {
+            status: "accepted"
+          }
         }
       }
     }
@@ -146,7 +164,10 @@ export const sendAlertNotification = async (data: SendAlertNotifications) => {
   const { db, evacuationEvent } = data;
 
   const group = await getGroup(db, evacuationEvent.groupId);
-  const users = group?.members.map((member) => member.user);
+  const filteredGroupMembers = group?.members.filter(
+    (member) => member.organizationMember.status === "accepted"
+  );
+  const users = filteredGroupMembers?.map((member) => member.user);
 
   if (!users || users.length === 0 || !group) {
     return;
@@ -164,7 +185,10 @@ export const sendAlertEndedNotification = async (data: SendAlertNotifications) =
   const { db, evacuationEvent } = data;
 
   const group = await getGroup(db, evacuationEvent.groupId);
-  const users = group?.members.map((member) => member.user);
+  const filteredGroupMembers = group?.members.filter(
+    (member) => member.organizationMember.status === "accepted"
+  );
+  const users = filteredGroupMembers?.map((member) => member.user);
 
   if (!users || users.length === 0 || !group) {
     return;

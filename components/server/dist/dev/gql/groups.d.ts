@@ -1,0 +1,9 @@
+export declare const GET_GROUP: import("graphql").DocumentNode;
+export declare const GET_GROUP_FOR_USER: import("graphql").DocumentNode;
+export declare const GET_GROUP_MEMBERS: import("graphql").DocumentNode;
+export declare const CREATE_GROUP: import("graphql").DocumentNode;
+export declare const DELETE_GROUP: import("graphql").DocumentNode;
+export declare const ADD_USERS_TO_GROUP: import("graphql").DocumentNode;
+export declare const REMOVE_USERS: import("graphql").DocumentNode;
+export declare const UPDATE_NOTIFICATION_SETTINGS: import("graphql").DocumentNode;
+export declare const UPDATE_GROUP_MEMBER: import("graphql").DocumentNode;

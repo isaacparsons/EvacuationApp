@@ -15,49 +15,48 @@ async function main() {
       accountCreated: true
     }
   });
-  const org1 = await prisma.organization.create({
-    data: {
-      name: "test org 1",
-      groups: {
-        create: {
-          name: "test group 1",
-          notificationSetting: {
-            create: {
-              emailEnabled: true,
-              pushEnabled: true,
-              smsEnabled: true
-            }
-          },
-          members: {
-            create: {
-              user: {
-                connect: { id: user1.id }
-              },
-              admin: false,
-              status: "accepted"
-            }
-          }
-        }
-      },
-      members: {
-        create: {
-          status: "accepted",
-          admin: true,
-          user: {
-            connect: { id: user1.id }
-          }
-        }
-      },
-      announcements: {
-        create: {
-          title: "test announcement 1",
-          description: "announcement description",
-          date: new Date().toISOString(),
-          createdBy: user1.id
-        }
-      }
-    }
-  });
+  // const org1 = await prisma.organization.create({
+  //   data: {
+  //     name: "test org 1",
+  //     groups: {
+  //       create: {
+  //         name: "test group 1",
+  //         notificationSetting: {
+  //           create: {
+  //             emailEnabled: true,
+  //             pushEnabled: true,
+  //             smsEnabled: true
+  //           }
+  //         },
+  //         members: {
+  //           create: {
+  //             user: {
+  //               connect: { id: user1.id }
+  //             },
+  //             admin: false,
+  //           }
+  //         }
+  //       }
+  //     },
+  //     members: {
+  //       create: {
+  //         status: "accepted",
+  //         admin: true,
+  //         user: {
+  //           connect: { id: user1.id }
+  //         }
+  //       }
+  //     },
+  //     announcements: {
+  //       create: {
+  //         title: "test announcement 1",
+  //         description: "announcement description",
+  //         date: new Date().toISOString(),
+  //         createdBy: user1.id
+  //       }
+  //     }
+  //   }
+  // });
 }
 main()
   .then(async () => {

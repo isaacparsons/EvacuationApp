@@ -3,6 +3,14 @@ import { gql } from "apollo-server";
 import * as bcrypt from "bcryptjs";
 import { server } from "../server";
 import TokenService from "../services/TokenService";
+import {
+  User,
+  Group,
+  Organization,
+  GroupNotificationSetting,
+  GroupNotificationSettingInput
+} from "../../dist/generated/graphql";
+import { GROUP, GROUP_NOTIFICATION_SETTING, ORG, ORG_NOTIFICATION_SETTINGS } from "./testData";
 
 const prisma = new PrismaClient();
 const tokenService = new TokenService();
@@ -47,7 +55,129 @@ export const setupUser = async (data: {
   return { user, token };
 };
 
-export const createOrg = async (orgName: string, token: string) => {};
+export const createOrg = async (db: PrismaClient) => {
+  return await prisma.organization.create({
+    data: {
+      ...ORG,
+      notificationSetting: {
+        create: ORG_NOTIFICATION_SETTINGS
+      }
+    }
+  });
+};
+
+export const createAdminOrgMember = async (db: PrismaClient, user: User, org: Organization) => {
+  return await prisma.organizationMember.create({
+    data: {
+      user: {
+        connect: { id: user.id }
+      },
+      organization: {
+        connect: { id: org.id }
+      },
+      status: "accepted",
+      admin: true
+    }
+  });
+};
+
+export const createNonAdminOrgMember = async (db: PrismaClient, user: User, org: Organization) => {
+  return await prisma.organizationMember.create({
+    data: {
+      user: {
+        connect: { id: user.id }
+      },
+      organization: {
+        connect: { id: org.id }
+      },
+      status: "accepted",
+      admin: false
+    }
+  });
+};
+
+export const createGroup = async ({
+  db,
+  org,
+  groupName,
+  notificationSettings
+}: {
+  db: PrismaClient;
+  org: Organization;
+  groupName?: string;
+  notificationSettings?: GroupNotificationSettingInput;
+}) => {
+  return await prisma.group.create({
+    data: {
+      name: groupName ?? GROUP.name,
+      organizationId: org.id,
+      notificationSetting: {
+        create: notificationSettings ?? GROUP_NOTIFICATION_SETTING
+      }
+    },
+    include: {
+      notificationSetting: true
+    }
+  });
+};
+
+export const createAdminGroupMember = async (
+  db: PrismaClient,
+  user: User,
+  org: Organization,
+  group: Group
+) => {
+  return await prisma.groupMember.create({
+    data: {
+      group: {
+        connect: {
+          id: group.id
+        }
+      },
+      organizationMember: {
+        connect: {
+          userId_organizationId: {
+            userId: user.id,
+            organizationId: org.id
+          }
+        }
+      },
+      admin: true,
+      user: {
+        connect: { id: user.id }
+      }
+    }
+  });
+};
+
+export const createNonAdminGroupMember = async (
+  db: PrismaClient,
+  user: User,
+  org: Organization,
+  group: Group
+) => {
+  return await prisma.groupMember.create({
+    data: {
+      group: {
+        connect: {
+          id: group.id
+        }
+      },
+      organizationMember: {
+        connect: {
+          userId_organizationId: {
+            userId: user.id,
+            organizationId: org.id
+          }
+        }
+      },
+      admin: false,
+      user: {
+        connect: { id: user.id }
+      }
+    }
+  });
+};
 
 export const inviteUsersToOrg = async (
   organizationId: number,
@@ -75,18 +205,4 @@ export const updateInvite = async (organizationId: number, status: string, token
     },
     { req: { headers: { authorization: `Bearer ${token}` } } } as any
   );
-};
-
-export const removeOrgMembers = async (
-  organizationId: string,
-  memberIds: number[],
-  token: string
-) => {
-  return;
-};
-
-export const deleteOrg = async (organizationId: string, token: string) => {};
-
-export const createGroup = async (variables: any, token: string) => {
-  return;
 };

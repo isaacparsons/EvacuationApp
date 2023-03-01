@@ -32,17 +32,18 @@ const auth = async ({ req }) => {
   const log = logger("Kiwitinohk Communications App");
   const prisma: PrismaClient = new PrismaClient();
   const result: Context = { db: prisma, log };
-  if (req.headers.authorization) {
+  if (req?.headers?.authorization) {
     const token = req.headers.authorization.replace("Bearer ", "");
     const { userId } = tokenService.verify(token);
     const user = await prisma.user.findUnique({
       where: { id: userId }
     });
 
-    if (user) {
-      result.log = logger("Kiwitinohk Communications App", { userId: user.id });
-      result.user = user;
+    if (!user) {
+      throw new Error("User does not exist for the given access token");
     }
+    result.log = logger("Kiwitinohk Communications App", { userId: user.id });
+    result.user = user;
   }
   return result;
 };

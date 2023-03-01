@@ -12,19 +12,19 @@ export const permissions = shield(
       getGroup: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       getGroupForUser: isAuthenticated,
       getGroupMembers: isAuthenticated,
-      getEvacuationEvents: isAuthenticated,
-      getEvacuationEvent: isAuthenticated
+      getEvacuationEvents: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
+      getEvacuationEvent: isAuthenticated,
+      getInProgressEvacuationEvents: isAuthenticated,
+      getJoinedEntities: isAuthenticated
     },
     Mutation: {
-      resetPassword: isAuthenticated,
       deleteUser: isAuthenticated,
       updateUser: isAuthenticated,
       createGroup: chain(isAuthenticated, isOrgAdmin),
       deleteGroup: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       updateGroupNotificationOptions: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
-      // inviteUsers: chain(isAuthenticated, or(isGroupAdmin, isOrgAdmin)),
-      // updateInvite: isAuthenticated,
       updateGroupMember: chain(isAuthenticated, isOrgAdmin),
+      updateOrganizationNotificationOptions: chain(isAuthenticated, isOrgAdmin),
       removeMembers: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       createEvacuationEvent: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       updateEvacuationEvent: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
@@ -33,6 +33,7 @@ export const permissions = shield(
       deleteOrganization: chain(isAuthenticated, isOrgAdmin),
       inviteToOrganization: chain(isAuthenticated, isOrgAdmin),
       updateOrgInvite: isAuthenticated,
+      addUsersToGroup: chain(isAuthenticated, race(isGroupAdmin, isOrgAdmin)),
       removeFromOrganization: chain(isAuthenticated, isOrgAdmin),
       createOrganizationAnnouncement: chain(isAuthenticated, isOrgAdmin),
       deleteOrganizationAnnouncement: chain(isAuthenticated, isOrgAdmin)
