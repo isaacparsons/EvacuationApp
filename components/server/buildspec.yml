@@ -3,9 +3,7 @@ version: 0.2
 phases:
   build:
     commands:
+      - cd components/server
       - npm install
       - npm run compile
-artifacts:
-  files:
-    - "./android/app/build/outputs/**/*.apk"
-  discard-paths: yes
+      - npm run test
