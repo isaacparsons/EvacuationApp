@@ -6,4 +6,5 @@ phases:
       - cd components/server
       - npm install
       # - npm run compile
-      - npm run test
+      - npm run setup-integration-tests
+      - npm run integration-test
