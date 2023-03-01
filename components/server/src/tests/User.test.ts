@@ -263,9 +263,6 @@ describe("user tests", () => {
       expect(recepients.length).toEqual(1);
       expect(mailhog.getSubject(email)).toEqual("Reset Password");
     });
-    it("test fail", async () => {
-      expect(1).toEqual(2);
-    });
   });
   // describe("Delete account", () => {
   //   it('should delete user if account exists', async () => {})
