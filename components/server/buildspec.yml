@@ -5,5 +5,5 @@ phases:
     commands:
       - cd components/server
       - npm install
-      - npm run compile
+      # - npm run compile
       - npm run test
