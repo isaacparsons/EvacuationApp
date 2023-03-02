@@ -2,7 +2,7 @@ version: 0.0
 os: linux
 files:
   - source: /
-    destination: /home/ubuntu/
+    destination: /home/ubuntu/server
 hooks:
   BeforeInstall:
     - location: scripts/startServer.sh
