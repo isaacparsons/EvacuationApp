@@ -18,7 +18,7 @@
     "fix:tslint": "tslint --fix --project .",
     "generate": "graphql-codegen --config codegen.ts",
     "compile": "npm run generate && tsc",
-    "start": "npm run compile && dotenv -e .env node ./dist/index.js",
+    "start": "dotenv -e .env node ./dist/index.js",
     "start-dev": "npm run compile && dotenv -e .env.dev node ./dist/index.js",
     "watch": "concurrently  --names \"CodeGen,TS,Nodemon\" -c \"bgYellow,bgBlue,bgMagenta\" \"graphql-codegen --watch 'src/**/*.ts'\"  \"tsc -w \" \"dotenv -e .env.dev nodemon ./dist/index.js \"",
     "generate:types": "graphql-codegen --config codegen.yml",
