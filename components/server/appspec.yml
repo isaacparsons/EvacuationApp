@@ -1,10 +1,10 @@
 version: 0.0
 os: linux
 files:
-  - source: /components/server
+  - source: /
     destination: /home/ubuntu/
 hooks:
   BeforeInstall:
-    - location: /components/server/scripts/startServer
+    - location: /scripts/startServer
       timeout: 900
       runas: root
