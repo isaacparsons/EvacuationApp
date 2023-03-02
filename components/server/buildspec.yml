@@ -5,7 +5,6 @@ phases:
     commands:
       - cd components/server
       - npm install
-      - npm run migrate-prod
       # - npm run compile
       - npm run setup-integration-tests
       - npm run integration-test
