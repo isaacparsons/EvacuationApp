@@ -10,5 +10,6 @@ phases:
       - npm run integration-test
 artifacts:
   files:
-    - "**/server/"
+    - "**/*"
+   base-directory: 'components/server'
 #     base-directory: 'components/server'
