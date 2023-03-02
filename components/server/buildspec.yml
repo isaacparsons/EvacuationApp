@@ -11,5 +11,5 @@ phases:
 artifacts:
   files:
     - "**/*"
-   base-directory: 'components/server'
+  base-directory: "components/server"
 #     base-directory: 'components/server'
