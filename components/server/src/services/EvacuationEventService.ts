@@ -1,4 +1,4 @@
-import { Context } from "../server";
+import { Context } from "../context";
 
 export const getEvacuationEvents = async (data: {
   context: Context;

@@ -1,5 +1,5 @@
 import { and, not, or, race, rule } from "graphql-shield";
-import { Context } from "../server";
+import { Context } from "../context";
 import { getGroupMemberFromEvacuationId } from "./utils/getGroupMemberFromEvacuationId";
 import { getGroupMemberFromGroupId } from "./utils/getGroupMemberFromGroupId";
 import { getOrgMemberFromAnnouncementId } from "./utils/getOrgMemberFromAnnouncementId";

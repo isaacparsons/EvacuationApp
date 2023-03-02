@@ -1,3 +1,21 @@
+import { MockContext, Context, createMockContext } from "../../context";
+
+let mockCtx: MockContext;
+let context: Context;
+
+beforeEach(() => {
+  mockCtx = createMockContext();
+  context = mockCtx as unknown as Context;
+});
+
+describe("group service unit tests", () => {
+  beforeEach(async () => {});
+
+  describe("inviteToOrganization", () => {
+    it("should return 1 succeeded user and 1 failed user", async () => {});
+  });
+});
+
 // import { Prisma, PrismaClient, User } from "@prisma/client";
 // import * as bcrypt from "bcryptjs";
 // import * as jwt from "jsonwebtoken";

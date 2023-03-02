@@ -3,9 +3,9 @@ import {
   InvitedOrganizationUser,
   OrganizationNotificationSettingInput
 } from "../generated/graphql";
-import { Context } from "../server";
 import doesAlreadyExistError from "../util/doesAlreadyExistError";
 import { RequestError } from "../util/errors";
+import { Context } from "../context";
 
 export const getOrganizationsForUser = async (data: { context: Context }) => {
   const { context } = data;
@@ -254,18 +254,21 @@ export const updateOrgInvite = async (data: {
     });
     return orgMember;
   }
-  const orgMember = await context.db.organizationMember.update({
-    where: {
-      userId_organizationId: {
-        userId: context.user!.id,
-        organizationId
+  if (status === "accepted") {
+    const orgMember = await context.db.organizationMember.update({
+      where: {
+        userId_organizationId: {
+          userId: context.user!.id,
+          organizationId
+        }
+      },
+      data: {
+        status
       }
-    },
-    data: {
-      status
-    }
-  });
-  return orgMember;
+    });
+    return orgMember;
+  }
+  throw new RequestError("Not a valid invitation response");
 };
 
 export const removeFromOrganization = async (data: {

@@ -1,7 +1,7 @@
 import { Prisma, User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { Auth } from "../generated/graphql";
-import { Context } from "../server";
+import { Context } from "../context";
 import { exclude } from "../util/db";
 import { RequestError } from "../util/errors";
 import TokenService from "./TokenService";

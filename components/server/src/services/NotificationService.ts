@@ -9,7 +9,7 @@ import {
 } from "@prisma/client";
 
 import { GroupNotificationSetting } from "../generated/graphql";
-import { Context } from "../server";
+import { Context } from "../context";
 import EmailService from "./EmailService";
 import PushNotificationService from "./PushNotificationService";
 import TokenService from "./TokenService";

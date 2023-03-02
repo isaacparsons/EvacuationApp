@@ -1,6 +1,6 @@
 import { Group, GroupMember } from "@prisma/client";
 import { AddGroupUser, GroupNotificationSettingInput, User } from "../generated/graphql";
-import { Context } from "../server";
+import { Context } from "../context";
 import { RequestError } from "../util/errors";
 
 export const getGroup = async (data: { context: Context; groupId: number }) => {
