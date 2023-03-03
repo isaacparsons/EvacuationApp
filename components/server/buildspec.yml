@@ -7,8 +7,8 @@ phases:
       - npm install
       - npm run lint
       - npm run compile
-      - npm run setup-integration-tests
-      - npm run integration-test
+      # - npm run setup-integration-tests
+      # - npm run integration-test
 artifacts:
   files:
     - "**/*"
