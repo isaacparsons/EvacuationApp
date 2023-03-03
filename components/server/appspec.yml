@@ -6,7 +6,7 @@ files:
 hooks:
   AfterInstall:
     - location: scripts/deploy.sh
-      timeout: 100
+      timeout: 900
       runas: root
   ApplicationStart:
     - location: scripts/startServer.sh
