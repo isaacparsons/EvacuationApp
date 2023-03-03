@@ -31,7 +31,7 @@ describe("group tests", () => {
       const { user, token } = await setupUser(USER1);
 
       const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user, org);
+      const adminOrgMember = await createAdminOrgMember(prisma, user, org);
 
       await server.executeOperation(
         {
