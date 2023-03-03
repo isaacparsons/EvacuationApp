@@ -1,24 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import { gql } from "apollo-server";
 import * as bcrypt from "bcryptjs";
-import { server } from "../server";
 import TokenService from "../services/TokenService";
-import {
-  User,
-  Group,
-  Organization,
-  GroupNotificationSetting,
-  GroupNotificationSettingInput
-} from "../generated/graphql";
+import { User, Group, Organization, GroupNotificationSettingInput } from "../generated/graphql";
 import { GROUP, GROUP_NOTIFICATION_SETTING, ORG, ORG_NOTIFICATION_SETTINGS } from "./testData";
 
 const prisma = new PrismaClient();
 const tokenService = new TokenService();
-
-interface InvitedOrganizationUser {
-  admin: boolean;
-  email: string;
-}
 
 export const deleteDb = async () => {
   await prisma.user.deleteMany({});
@@ -56,7 +43,7 @@ export const setupUser = async (data: {
 };
 
 export const createOrg = async (db: PrismaClient) => {
-  return await prisma.organization.create({
+  return await db.organization.create({
     data: {
       ...ORG,
       notificationSetting: {
@@ -67,7 +54,7 @@ export const createOrg = async (db: PrismaClient) => {
 };
 
 export const createAdminOrgMember = async (db: PrismaClient, user: User, org: Organization) => {
-  return await prisma.organizationMember.create({
+  return await db.organizationMember.create({
     data: {
       user: {
         connect: { id: user.id }
@@ -82,7 +69,7 @@ export const createAdminOrgMember = async (db: PrismaClient, user: User, org: Or
 };
 
 export const createNonAdminOrgMember = async (db: PrismaClient, user: User, org: Organization) => {
-  return await prisma.organizationMember.create({
+  return await db.organizationMember.create({
     data: {
       user: {
         connect: { id: user.id }
@@ -107,7 +94,7 @@ export const createGroup = async ({
   groupName?: string;
   notificationSettings?: GroupNotificationSettingInput;
 }) => {
-  return await prisma.group.create({
+  return await db.group.create({
     data: {
       name: groupName ?? GROUP.name,
       organizationId: org.id,
@@ -127,7 +114,7 @@ export const createAdminGroupMember = async (
   org: Organization,
   group: Group
 ) => {
-  return await prisma.groupMember.create({
+  return await db.groupMember.create({
     data: {
       group: {
         connect: {
@@ -156,7 +143,7 @@ export const createNonAdminGroupMember = async (
   org: Organization,
   group: Group
 ) => {
-  return await prisma.groupMember.create({
+  return await db.groupMember.create({
     data: {
       group: {
         connect: {
@@ -177,32 +164,4 @@ export const createNonAdminGroupMember = async (
       }
     }
   });
-};
-
-export const inviteUsersToOrg = async (
-  organizationId: number,
-  users: InvitedOrganizationUser[],
-  token: string
-) => {
-  return;
-};
-
-export const updateInvite = async (organizationId: number, status: string, token: string) => {
-  return server.executeOperation(
-    {
-      query: gql`
-        mutation UpdateOrgInvite($organizationId: Int!, $status: String!) {
-          updateOrgInvite(organizationId: $organizationId, status: $status) {
-            id
-            userId
-            organizationId
-            status
-            admin
-          }
-        }
-      `,
-      variables: { organizationId, status }
-    },
-    { req: { headers: { authorization: `Bearer ${token}` } } } as any
-  );
 };

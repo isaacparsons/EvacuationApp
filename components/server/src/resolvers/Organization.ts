@@ -1,8 +1,4 @@
 import {
-  sendAnnouncementNotification,
-  sendCompleteSignupNotifications
-} from "../services/NotificationService";
-import {
   createOrganization,
   createOrganizationAnnouncement,
   deleteOrganization,
@@ -19,41 +15,48 @@ import {
 } from "../services/OrganizationService";
 
 import { Resolvers } from "../generated/graphql";
-import { addUsersToGroups, getAcceptedGroupMembersByGroupIds } from "../services/GroupService";
+import { addUsersToGroups, getAcceptedUsersByGroupIds } from "../services/GroupService";
 import { RequestError } from "../util/errors";
+import { createAnnouncementNotification, NotificationType } from "../services/NotificationService";
+import { getOrgWithAcceptedMembers } from "../services/OrganizationService";
+import { User } from "@prisma/client";
+import { getOrganizationById } from "../services/OrganizationService";
 import {
-  createAnnouncementNotification,
-  sendOrganizationNotifications
+  createCompleteSignupNotification,
+  createInvitedToOrgNotification
 } from "../services/NotificationService";
-import { getAcceptedOrganizationMembers } from "../services/OrganizationService";
+import {
+  sendNotifications,
+  createOrganizationNotifications
+} from "../services/NotificationService";
 
 const OrganizationResolver: Resolvers = {
   Query: {
-    getOrganizations: async (parent, args, context, info) => {
+    getOrganizations: async (parent, args, context) => {
       const organizations = await getOrganizationsForUser({
         context
       });
       return organizations;
     },
-    getOrganization: async (parent, args, context, info) => {
+    getOrganization: async (parent, args, context) => {
       return getOrganization({
         context,
         ...args
       });
     },
-    getOrganizationForUser: async (parent, args, context, info) => {
+    getOrganizationForUser: async (parent, args, context) => {
       return getOrganizationForUser({
         context,
         ...args
       });
     },
-    getOrganizationMembers: async (parent, args, context, info) => {
+    getOrganizationMembers: async (parent, args, context) => {
       return getOrganizationMembers({
         context,
         ...args
       });
     },
-    getAnnouncements: async (parent, args, context, info) => {
+    getAnnouncements: async (parent, args, context) => {
       return getAnnouncements({
         context,
         ...args
@@ -61,60 +64,89 @@ const OrganizationResolver: Resolvers = {
     }
   },
   Mutation: {
-    createOrganization: async (parent, args, context, info) => {
+    createOrganization: async (parent, args, context) => {
       const organization = await createOrganization({
         context,
         ...args
       });
       return organization;
     },
-    deleteOrganization: async (parent, args, context, info) => {
+    deleteOrganization: async (parent, args, context) => {
       const organization = await deleteOrganization({
         context,
         ...args
       });
       return organization;
     },
-    updateOrganizationNotificationOptions: async (parent, args, context, info) => {
+    updateOrganizationNotificationOptions: async (parent, args, context) => {
       const organization = await updateOrganizationNotificationOptions({
         context,
         ...args
       });
       return organization;
     },
-    inviteToOrganization: async (parent, args, context, info) => {
+    inviteToOrganization: async (parent, args, context) => {
+      const { groupIds, organizationId } = args;
       const { succeeded, failed } = await inviteToOrganization({
         context,
         ...args
       });
-      const userIds = succeeded.map((member) => member.userId);
-      if (args.groupIds && args.groupIds.length > 0) {
+      const users = succeeded.map((member) => member.user);
+      if (groupIds && groupIds.length > 0) {
+        const userIds = users.map((user) => user.id);
         await addUsersToGroups({
           context,
-          organizationId: args.organizationId,
+          organizationId: organizationId,
           userIds,
-          groupIds: args.groupIds
+          groupIds: groupIds
         });
       }
-      const membersToEmail = succeeded.filter((member) => !member.user.accountCreated);
-      await sendCompleteSignupNotifications({
+      const organization = await getOrganizationById({ context, organizationId });
+      const notSignedUpUsers = users.filter((user) => !user.accountCreated);
+      const signedUpUsers = users.filter((user) => user.accountCreated);
+
+      const completeSignupNotifications = notSignedUpUsers.map((user) => {
+        const notificationDetails = createCompleteSignupNotification({
+          user,
+          organization
+        });
+        return {
+          type: NotificationType.EMAIL,
+          users: [user],
+          content: notificationDetails
+        };
+      });
+
+      const invitedToOrgNotifications = signedUpUsers.map((user) => {
+        const notificationDetails = createInvitedToOrgNotification({
+          organization
+        });
+        return {
+          type: NotificationType.EMAIL,
+          users: [user],
+          content: notificationDetails
+        };
+      });
+
+      const notifications = [...completeSignupNotifications, ...invitedToOrgNotifications];
+
+      await sendNotifications({
         context,
-        organizationId: args.organizationId,
-        members: membersToEmail
+        notifications
       });
       if (failed.length > 0) {
         throw new RequestError("failed to invite 1 or more users");
       }
       return succeeded;
     },
-    updateOrgInvite: async (parent, args, context, info) => {
+    updateOrgInvite: async (parent, args, context) => {
       const organizationMember = await updateOrgInvite({
         context,
         ...args
       });
       return organizationMember;
     },
-    removeFromOrganization: async (parent, args, context, info) => {
+    removeFromOrganization: async (parent, args, context) => {
       const { succeeded, failed } = await removeFromOrganization({
         context,
         ...args
@@ -124,31 +156,35 @@ const OrganizationResolver: Resolvers = {
       }
       return succeeded;
     },
-    createOrganizationAnnouncement: async (parent, args, context, info) => {
+    createOrganizationAnnouncement: async (parent, args, context) => {
       const { groupIds } = args;
       const announcement = await createOrganizationAnnouncement({
         context,
         ...args
       });
-      const notification = createAnnouncementNotification({ announcement });
-      let users = [];
+      const organization = await getOrgWithAcceptedMembers({
+        context,
+        organizationId: announcement.organizationId
+      });
+      let users: User[] = organization.members.map((member) => member.user);
+      const notificationDetails = createAnnouncementNotification({ announcement });
       if (groupIds && groupIds.length > 0) {
-        const members = await getAcceptedGroupMembersByGroupIds({ context, groupIds });
-      } else {
-        const members = await getAcceptedOrganizationMembers({
+        users = await getAcceptedUsersByGroupIds({ context, groupIds });
+      }
+      if (organization.notificationSetting) {
+        const notifications = createOrganizationNotifications({
+          users,
+          notificationSettings: organization.notificationSetting,
+          notificationDetails
+        });
+        await sendNotifications({
           context,
-          organizationId: announcement.organizationId
+          notifications
         });
       }
-      await sendOrganizationNotifications({ notificationSettings, users, notification });
-      await sendAnnouncementNotification({
-        announcement,
-        groupIds,
-        db: context.db
-      });
       return announcement;
     },
-    deleteOrganizationAnnouncement: async (parent, args, context, info) => {
+    deleteOrganizationAnnouncement: async (parent, args, context) => {
       const organization = await deleteOrganizationAnnouncement({
         context,
         ...args

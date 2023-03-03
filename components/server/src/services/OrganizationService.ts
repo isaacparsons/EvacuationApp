@@ -48,6 +48,19 @@ export const getOrganization = async (data: { context: Context; organizationId: 
   return organization;
 };
 
+export const getOrganizationById = async (data: { context: Context; organizationId: number }) => {
+  const { organizationId, context } = data;
+  const organization = await context.db.organization.findUnique({
+    where: {
+      id: organizationId
+    }
+  });
+  if (!organization) {
+    throw new RequestError(`Organization does not exist with id: ${organizationId}`);
+  }
+  return organization;
+};
+
 export const getOrganizationMembers = async (data: {
   context: Context;
   organizationId: number;
@@ -82,21 +95,31 @@ export const getOrganizationMembers = async (data: {
   };
 };
 
-export const getAcceptedOrganizationMembers = async (data: {
+export const getOrgWithAcceptedMembers = async (data: {
   context: Context;
   organizationId: number;
 }) => {
   const { organizationId, context } = data;
-  const organizationMembers = await context.db.organizationMember.findMany({
+  const organization = await context.db.organization.findUnique({
     where: {
-      organizationId
+      id: organizationId
     },
     include: {
-      user: true
+      members: {
+        where: {
+          status: "accepted"
+        },
+        include: {
+          user: true
+        }
+      },
+      notificationSetting: true
     }
   });
-
-  return organizationMembers;
+  if (!organization) {
+    throw new RequestError(`No organization exists with id: ${organizationId}`);
+  }
+  return organization;
 };
 
 export const getOrganizationForUser = async (data: {

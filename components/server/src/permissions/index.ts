@@ -1,4 +1,4 @@
-import { chain, or, race, shield } from "graphql-shield";
+import { chain, race, shield } from "graphql-shield";
 import { isAuthenticated, isGroupAdmin, isOrgAdmin } from "./rules";
 
 export const permissions = shield(

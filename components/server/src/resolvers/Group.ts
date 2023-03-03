@@ -13,19 +13,19 @@ import { GroupNotificationSetting, Resolvers } from "../generated/graphql";
 
 const GroupResolver: Resolvers = {
   Query: {
-    getGroup: async (parent, args, context, info) => {
+    getGroup: async (parent, args, context) => {
       return getGroup({
         groupId: args.groupId,
         context
       });
     },
-    getGroupForUser: async (parent, args, context, info) => {
+    getGroupForUser: async (parent, args, context) => {
       return getGroupForUser({
         groupId: args.groupId,
         context
       });
     },
-    getGroupMembers: async (parent, args, context, info) => {
+    getGroupMembers: async (parent, args, context) => {
       return getGroupMembers({
         groupId: args.groupId,
         cursor: args.cursor!,
@@ -34,14 +34,14 @@ const GroupResolver: Resolvers = {
     }
   },
   Mutation: {
-    createGroup: async (parent, args, context, info): Promise<Group> => {
+    createGroup: async (parent, args, context): Promise<Group> => {
       const group = await createGroup({
         ...args,
         context
       });
       return group;
     },
-    deleteGroup: async (parent, args, context, info): Promise<Group> => {
+    deleteGroup: async (parent, args, context): Promise<Group> => {
       const group = await deleteGroup({
         ...args,
         context
@@ -60,14 +60,14 @@ const GroupResolver: Resolvers = {
       });
       return groupNotificationSetting;
     },
-    addUsersToGroup: async (parent, args, context, info) => {
+    addUsersToGroup: async (parent, args, context) => {
       return addUsersToGroup({
         groupId: args.groupId,
         users: args.users!,
         context
       });
     },
-    removeMembers: async (parent, args, context, info) => {
+    removeMembers: async (parent, args, context) => {
       const { succeeded, failed } = await removeMembers({
         groupId: args.groupId,
         userIds: args.userIds,
@@ -78,7 +78,7 @@ const GroupResolver: Resolvers = {
       }
       return succeeded;
     },
-    updateGroupMember: async (parent, args, context, info) => {
+    updateGroupMember: async (parent, args, context) => {
       const groupMember = await updateGroupMember({
         ...args,
         context

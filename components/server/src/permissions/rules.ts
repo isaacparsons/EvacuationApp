@@ -1,4 +1,4 @@
-import { and, not, or, race, rule } from "graphql-shield";
+import { rule } from "graphql-shield";
 import { Context } from "../context";
 import { getGroupMemberFromEvacuationId } from "./utils/getGroupMemberFromEvacuationId";
 import { getGroupMemberFromGroupId } from "./utils/getGroupMemberFromGroupId";
@@ -7,14 +7,14 @@ import { getOrgMemberFromEvacuationId } from "./utils/getOrgMemberFromEvacuation
 import { getOrgMemberFromGroupId } from "./utils/getOrgMemberFromGroupId";
 import { getOrgMemberFromOrgId } from "./utils/getOrgMemberFromOrgId";
 
-export const isAuthenticated = rule()(async (parent, args, ctx: Context, info) => {
+export const isAuthenticated = rule()(async (parent, args, ctx: Context) => {
   if (!ctx.user) {
     return new Error("Missing access token");
   }
   return true;
 });
 
-export const isGroupAdmin = rule()(async (parent, args, ctx: Context, info) => {
+export const isGroupAdmin = rule()(async (parent, args, ctx: Context) => {
   let member;
   if (args.evacuationId) {
     member = await getGroupMemberFromEvacuationId(ctx.db, ctx.user!.id, args.evacuationId);
@@ -30,7 +30,7 @@ export const isGroupAdmin = rule()(async (parent, args, ctx: Context, info) => {
   return false;
 });
 
-export const isOrgAdmin = rule()(async (parent, args, ctx: Context, info) => {
+export const isOrgAdmin = rule()(async (parent, args, ctx: Context) => {
   let member;
   if (args.announcementId) {
     member = await getOrgMemberFromAnnouncementId(ctx.db, ctx.user!.id, args.announcementId);

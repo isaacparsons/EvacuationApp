@@ -13,9 +13,9 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "scripts": {
-    "fix": "run-s fix:*",
+    "lint": "eslint --ext .js,.ts .",
+    "lint:fix": "eslint --fix --ext .js,.ts .",
     "fix:prettier": "prettier \"src/**/*.ts\" --write --loglevel warn",
-    "fix:tslint": "tslint --fix --project .",
     "generate": "graphql-codegen --config codegen.ts",
     "compile": "npm run generate && tsc",
     "start": "dotenv -e .env node ./dist/index.js",
@@ -26,7 +26,6 @@
     "migrate": "dotenv -e .env.dev npx prisma migrate dev --preview-feature --skip-generate --name \"init\" && dotenv -e .env.dev npx prisma generate",
     "migrate-prod": "dotenv -e .env node node_modules/prisma/build/index.js migrate deploy",
     "prisma-studio": "dotenv -e .env.dev npx prisma studio",
-    "test:lint": "tslint --project . && prettier \"src/**/*.ts\" --list-different",
     "test:types": "tsc -p . --noEmit",
     "dev": "concurrently \"npm run start\" \"npm run client\"",
     "client": "npm run start --prefix client",
@@ -90,9 +89,13 @@
     "@types/jest": "^29.0.0",
     "@types/node": "^12.7.3",
     "@types/nodemailer": "^6.4.5",
+    "@typescript-eslint/eslint-plugin": "^5.54.0",
+    "@typescript-eslint/parser": "^5.54.0",
     "copyfiles": "^2.4.1",
     "dotenv": "^16.0.3",
     "dotenv-cli": "^5.1.0",
+    "eslint": "^8.35.0",
+    "eslint-config-prettier": "^8.6.0",
     "graphql-tools": "^8.3.6",
     "husky": "^3.0.5",
     "jest-mock-extended": "^3.0.3",
@@ -102,9 +105,6 @@
     "prisma": "^4.3.0",
     "ts-jest": "^28.0.8",
     "ts-node": "^10.9.1",
-    "tslint": "^5.19.0",
-    "tslint-config-prettier": "^1.18.0",
-    "tslint-jest": "^1.0.5",
     "typescript": "^4.8.2"
   }
 }

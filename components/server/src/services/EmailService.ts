@@ -1,4 +1,4 @@
-import { Organization, User } from "@prisma/client";
+import { User } from "@prisma/client";
 import nodemailer from "nodemailer";
 import TokenService from "./TokenService";
 import Mailhog from "../dev/Mailhog";

@@ -103,7 +103,7 @@ describe("organization tests", () => {
           members: true
         }
       });
-      const result = await server.executeOperation(
+      await server.executeOperation(
         {
           query: gql`
             mutation RemoveFromOrganization($organizationId: Int!) {
@@ -185,7 +185,7 @@ describe("organization tests", () => {
         }
       });
 
-      const result = await server.executeOperation(
+      await server.executeOperation(
         {
           query: INVITE_TO_ORG,
           variables: { organizationId: org.id, users }
@@ -202,7 +202,7 @@ describe("organization tests", () => {
       const invitedOrgMember = await prisma.organizationMember.findUnique({
         where: {
           userId_organizationId: {
-            userId: invitedUser?.id!,
+            userId: invitedUser!.id,
             organizationId: org.id
           }
         }
@@ -234,7 +234,7 @@ describe("organization tests", () => {
     });
     it("should not invite users to org if user is not admin", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: invitedUser, token: invitedUserToken } = await setupUser(USER2);
+      const { user: invitedUser } = await setupUser(USER2);
 
       const users = [{ admin: false, email: invitedUser.email }];
 
@@ -281,7 +281,7 @@ describe("organization tests", () => {
   describe("remove users", () => {
     it("should remove users from org if user is admin", async () => {
       const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
-      const { user: memberUser, token: memberUserToken } = await setupUser(USER2);
+      const { user: memberUser } = await setupUser(USER2);
 
       const org = await prisma.organization.create({
         data: {
@@ -333,7 +333,7 @@ describe("organization tests", () => {
       ]);
     });
     it("should not remove users from org if user is not admin", async () => {
-      const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
+      const { user: adminUser } = await setupUser(USER1);
       const { user: memberUser, token: memberUserToken } = await setupUser(USER2);
 
       const org = await prisma.organization.create({
@@ -378,7 +378,7 @@ describe("organization tests", () => {
   });
   describe("update invite", () => {
     it("should update invite if the invite is for the user", async () => {
-      const { user: adminUser, token: adminUserToken } = await setupUser(USER1);
+      const { user: adminUser } = await setupUser(USER1);
       const { user: invitedUser, token: invitedUserToken } = await setupUser(USER2);
       const org = await prisma.organization.create({
         data: {
@@ -404,7 +404,7 @@ describe("organization tests", () => {
         }
       });
 
-      const result = await server.executeOperation(
+      await server.executeOperation(
         {
           query: UPDATE_ORG_INVITE,
           variables: { organizationId: org.id, status: "accepted" }

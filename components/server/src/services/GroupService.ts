@@ -1,5 +1,5 @@
-import { Group, GroupMember } from "@prisma/client";
-import { AddGroupUser, GroupNotificationSettingInput, User } from "../generated/graphql";
+import { Group, GroupMember, User } from "@prisma/client";
+import { AddGroupUser, GroupNotificationSettingInput } from "../generated/graphql";
 import { Context } from "../context";
 import { RequestError } from "../util/errors";
 
@@ -107,7 +107,33 @@ export const getGroupMembers = async (data: {
   };
 };
 
-export const getAcceptedGroupMembersByGroupIds = async (data: {
+export const getGroupWithAcceptedMembers = async (data: { context: Context; groupId: number }) => {
+  const { groupId, context } = data;
+  const group = await context.db.group.findUnique({
+    where: {
+      id: groupId
+    },
+    include: {
+      members: {
+        where: {
+          organizationMember: {
+            status: "accepted"
+          }
+        },
+        include: {
+          user: true
+        }
+      },
+      notificationSetting: true
+    }
+  });
+  if (!group) {
+    throw new RequestError(`No group exists with id: ${groupId}`);
+  }
+  return group;
+};
+
+export const getAcceptedUsersByGroupIds = async (data: {
   context: Context;
   groupIds: number[];
 }) => {

@@ -15,7 +15,7 @@ describe("user tests", () => {
   });
   describe("Sign up", () => {
     it("shouldnt be able to sign up if account exists with email and account created=true", async () => {
-      const { user, token } = await setupUser(USER1);
+      await setupUser(USER1);
 
       const result = await server.executeOperation({
         query: SIGNUP,
@@ -31,7 +31,7 @@ describe("user tests", () => {
       expect(result.errors?.[0]?.message).toEqual("An account with this email already exists");
     });
     it("shouldnt be able to sign up if account with phone number already exists and account created=true", async () => {
-      const { user, token } = await setupUser(USER1);
+      await setupUser(USER1);
 
       const result = await server.executeOperation({
         query: SIGNUP,
@@ -49,7 +49,7 @@ describe("user tests", () => {
       );
     });
     it("should be able to sign up if account exists and account created == false", async () => {
-      const { user, token } = await setupUser({
+      const { user } = await setupUser({
         email: USER1.email,
         phoneNumber: USER1.phoneNumber,
         password: USER1.password,
@@ -134,7 +134,7 @@ describe("user tests", () => {
   });
   describe("Log in", () => {
     it("should be able to login if account exists and account created == true", async () => {
-      const { user, token } = await setupUser(USER1);
+      const { user } = await setupUser(USER1);
 
       const result = await server.executeOperation({
         query: LOGIN,
@@ -171,7 +171,7 @@ describe("user tests", () => {
       });
     });
     it("shouldnt be able to login if account exists and account created == false", async () => {
-      const { user, token } = await setupUser({
+      await setupUser({
         email: USER1.email,
         phoneNumber: USER1.phoneNumber,
         password: USER1.password,
@@ -203,7 +203,7 @@ describe("user tests", () => {
       expect(result.errors?.[0]?.message).toEqual(`No user found with email: ${USER1.email}`);
     });
     it("shouldnt be able to login if password is incorrect", async () => {
-      const { user, token } = await setupUser(USER1);
+      await setupUser(USER1);
       const result = await server.executeOperation({
         query: LOGIN,
         variables: {
@@ -217,7 +217,7 @@ describe("user tests", () => {
   });
   describe("Reset password", () => {
     it("shouldnt be able to reset password if account exists and account created == false", async () => {
-      const { user, token } = await setupUser({
+      await setupUser({
         email: USER1.email,
         phoneNumber: USER1.phoneNumber,
         password: USER1.password,
@@ -245,7 +245,7 @@ describe("user tests", () => {
       expect(result.errors?.[0]?.message).toEqual(`No user found for email: ${USER1.email}`);
     });
     it("should be able to reset password if account exists and account created == true", async () => {
-      const { user, token } = await setupUser(USER1);
+      const { user } = await setupUser(USER1);
       const result = await server.executeOperation({
         query: RESET_PASSWORD,
         variables: {

@@ -1,9 +1,13 @@
 import bunyan from "bunyan";
 import path from "path";
 
-const mockLogger = {
-  error: () => {},
-  info: () => {}
+export const mockLogger = {
+  error: () => {
+    return;
+  },
+  info: () => {
+    return;
+  }
 };
 
 const logger = (name: string, options?: any) => {

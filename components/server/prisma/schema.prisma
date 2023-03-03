@@ -63,7 +63,7 @@ model GroupNotificationSetting {
   pushEnabled           Boolean
   smsEnabled            Boolean
 
-  group                 Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group                 Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 
@@ -112,7 +112,7 @@ model OrganizationNotificationSetting {
   pushEnabled           Boolean
   smsEnabled            Boolean
 
-  group                 Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 model OrganizationMember {

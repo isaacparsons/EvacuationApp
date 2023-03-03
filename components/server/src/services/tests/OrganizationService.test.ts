@@ -30,7 +30,6 @@ describe("organization service unit tests", () => {
     status: "pending",
     admin: false
   };
-  beforeEach(async () => {});
 
   describe("inviteToOrganization", () => {
     const mockUsers = [

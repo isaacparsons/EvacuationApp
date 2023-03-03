@@ -3,9 +3,7 @@ import {
   EvacuationEvent,
   Group,
   Organization,
-  OrganizationMember,
   OrganizationNotificationSetting,
-  PrismaClient,
   User,
   GroupNotificationSetting
 } from "@prisma/client";
@@ -19,46 +17,100 @@ const emailService = new EmailService();
 const pushNotificationService = new PushNotificationService();
 const tokenService = new TokenService();
 
+export enum NotificationType {
+  EMAIL = "email",
+  PUSH = "push"
+}
+
+export interface Notification {
+  type: NotificationType;
+  users: User[];
+  content: NotificationDetails;
+}
+
 export interface NotificationDetails {
   subject: string;
   message: string;
   appLink?: string;
+  signupLink?: string;
 }
 
-export const sendOrganizationNotifications = async (data: {
-  notificationSettings: OrganizationNotificationSetting;
-  users: User[];
-  notification: NotificationDetails;
+export const sendNotifications = async (data: {
+  context: Context;
+  notifications: Notification[];
 }) => {
-  const { notificationSettings, users, notification } = data;
-  if (notificationSettings.emailEnabled) {
-    await emailService.sendEmail(users, notification.subject, notification.message);
-  }
-  if (notificationSettings.pushEnabled) {
-    await pushNotificationService.sendNotifications(
-      users,
-      notification.message,
-      notification.appLink
-    );
-  }
+  const { context, notifications } = data;
+  await Promise.all(
+    notifications.map(async (notification) => {
+      try {
+        if (notification.type === "email") {
+          await emailService.sendEmail(
+            notification.users,
+            notification.content.subject,
+            notification.content.message,
+            notification.content.signupLink
+          );
+        }
+        if (notification.type === "push") {
+          await pushNotificationService.sendNotifications(
+            notification.users,
+            notification.content.message,
+            notification.content.appLink
+          );
+        }
+      } catch (error) {
+        context.log.error({ notification }, `Failed to send notification`);
+      }
+    })
+  );
 };
 
-export const sendGroupNotifications = async (data: {
-  notificationSettings: GroupNotificationSetting;
+export const createOrganizationNotifications = (data: {
   users: User[];
-  notification: NotificationDetails;
+  notificationSettings: OrganizationNotificationSetting;
+  notificationDetails: NotificationDetails;
 }) => {
-  const { notificationSettings, users, notification } = data;
+  const { users, notificationSettings, notificationDetails } = data;
+  const notifications: Notification[] = [];
   if (notificationSettings.emailEnabled) {
-    await emailService.sendEmail(users, notification.subject, notification.message);
+    notifications.push({
+      users,
+      type: NotificationType.EMAIL,
+      content: notificationDetails
+    });
   }
   if (notificationSettings.pushEnabled) {
-    await pushNotificationService.sendNotifications(
+    notifications.push({
       users,
-      notification.message,
-      notification.appLink
-    );
+      type: NotificationType.PUSH,
+      content: notificationDetails
+    });
   }
+  return notifications;
+};
+
+export const createGroupNotifications = (data: {
+  users: User[];
+  notificationSettings: GroupNotificationSetting;
+  notificationDetails: NotificationDetails;
+}) => {
+  const { users, notificationSettings, notificationDetails } = data;
+  const notifications: Notification[] = [];
+  if (notificationSettings.emailEnabled) {
+    notifications.push({
+      users,
+      type: NotificationType.EMAIL,
+      content: notificationDetails
+    });
+  }
+  if (notificationSettings.pushEnabled) {
+    notifications.push({
+      users,
+      type: NotificationType.PUSH,
+      content: notificationDetails
+    });
+  }
+  return notifications;
 };
 
 export const createAnnouncementNotification = (data: { announcement: Announcement }) => {
@@ -69,26 +121,8 @@ export const createAnnouncementNotification = (data: { announcement: Announcemen
     message: announcement.description || ""
   };
 };
-// export const sendAnnouncementNotification = async (data: {
-//   announcement: Announcement;
-//   users: User[];
-//   notificationSetting: OrganizationNotificationSetting;
-//   groupIds?: number[] | null;
-// }) => {
-//   const { users, notificationSetting, announcement } = data;
 
-//   const subject = `Announcement - ${announcement.title}`;
-//   // const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-
-//   await sendOrganizationNotifications(
-//     notificationSetting,
-//     users,
-//     subject,
-//     announcement.description || ""
-//   );
-// };
-
-export const createAlertNotification = async (data: {
+export const createAlertNotification = (data: {
   evacuationEvent: EvacuationEvent;
   group: Group;
 }) => {
@@ -101,22 +135,7 @@ export const createAlertNotification = async (data: {
   };
 };
 
-// export const sendAlertNotification = async (data: {
-//   users: User[];
-//   evacuationEvent: EvacuationEvent;
-//   group: Group;
-//   notificationSetting: GroupNotificationSetting;
-// }) => {
-//   const { group, users, evacuationEvent, notificationSetting } = data;
-
-//   const subject = "Evacuation Alert!";
-//   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-//   const message = `Evacuation issued for ${group.name} \n message: ${evacuationEvent.message}`;
-
-//   await sendGroupNotifications(notificationSetting, users, subject, message, appLink);
-// };
-
-export const createAlertEndedNotification = async (data: {
+export const createAlertEndedNotification = (data: {
   evacuationEvent: EvacuationEvent;
   group: Group;
 }) => {
@@ -129,57 +148,36 @@ export const createAlertEndedNotification = async (data: {
   };
 };
 
-// export const sendAlertEndedNotification = async (data: {
-//   users: User[];
-//   evacuationEvent: EvacuationEvent;
-//   group: Group;
-//   notificationSetting: GroupNotificationSetting;
-// }) => {
-//   const { group, users, evacuationEvent, notificationSetting } = data;
-
-//   const subject = "Evacuation status update: safe to return";
-//   const message = `Evacuation for ${group.name} has ended, it is now safe to return`;
-//   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-
-//   await sendGroupNotifications(notificationSetting, users, subject, message, appLink);
-// };
-
-export const sendPasswordResetNotification = async (user: User) => {
+export const createPasswordResetNotification = (data: { user: User }) => {
+  const { user } = data;
   const token = tokenService.create(user);
   const resetLink = `${process.env.CLIENT_URL}/changePassword?token=${token}`;
-  await emailService.sendEmail(
-    [user],
-    "Reset Password",
-    `Visit the link below to reset your password: \n ${resetLink}`
-  );
+  return {
+    subject: "Reset Password",
+    message: `Visit the link below to reset your password: \n ${resetLink}`
+  };
 };
 
-export const sendCompleteSignupNotifications = async (data: {
-  context: Context;
+export const createCompleteSignupNotification = (data: {
+  user: User;
   organization: Organization;
-  users: User[];
 }) => {
-  const { organization, users, context } = data;
-
-  await Promise.all(
-    users.map(async (user) => {
-      try {
-        await sendCompleteSignupNotification(user, organization);
-      } catch (error) {
-        context.log.error(`Failed to send complete signup email to user with email: ${user.email}`);
-      }
-    })
-  );
-};
-
-const sendCompleteSignupNotification = async (user: User, organization: Organization) => {
+  const { user, organization } = data;
   const token = tokenService.create(user);
   const signupLink = `http://${process.env.CLIENT_URL}/completeSignup?token=${token}`;
 
-  await emailService.sendEmail(
-    [user],
-    "Complete Signup",
-    `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n`,
+  return {
+    subject: "Complete Signup",
+    message: `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n`,
     signupLink
-  );
+  };
+};
+
+export const createInvitedToOrgNotification = (data: { organization: Organization }) => {
+  const { organization } = data;
+
+  return {
+    subject: `Invitation to ${organization.name}`,
+    message: `You have been invited to the organization: ${organization.name}. Open the app to respond to invitation: \n`
+  };
 };

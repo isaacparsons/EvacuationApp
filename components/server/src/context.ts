@@ -1,7 +1,7 @@
 import { User } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { mockDeep, DeepMockProxy } from "jest-mock-extended";
-import logger from "./config/logger";
+import logger, { mockLogger } from "./config/logger";
 import TokenService from "./services/TokenService";
 
 const tokenService = new TokenService();
@@ -21,10 +21,7 @@ export type MockContext = {
 export const createMockContext = (): MockContext => {
   return {
     db: mockDeep<PrismaClient>(),
-    log: {
-      error: () => {},
-      info: () => {}
-    }
+    log: mockLogger
   };
 };
 
