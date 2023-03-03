@@ -82,6 +82,23 @@ export const getOrganizationMembers = async (data: {
   };
 };
 
+export const getAcceptedOrganizationMembers = async (data: {
+  context: Context;
+  organizationId: number;
+}) => {
+  const { organizationId, context } = data;
+  const organizationMembers = await context.db.organizationMember.findMany({
+    where: {
+      organizationId
+    },
+    include: {
+      user: true
+    }
+  });
+
+  return organizationMembers;
+};
+
 export const getOrganizationForUser = async (data: {
   context: Context;
   organizationId: number;

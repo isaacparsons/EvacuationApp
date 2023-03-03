@@ -19,8 +19,13 @@ import {
 } from "../services/OrganizationService";
 
 import { Resolvers } from "../generated/graphql";
-import { addUsersToGroups } from "../services/GroupService";
+import { addUsersToGroups, getAcceptedGroupMembersByGroupIds } from "../services/GroupService";
 import { RequestError } from "../util/errors";
+import {
+  createAnnouncementNotification,
+  sendOrganizationNotifications
+} from "../services/NotificationService";
+import { getAcceptedOrganizationMembers } from "../services/OrganizationService";
 
 const OrganizationResolver: Resolvers = {
   Query: {
@@ -120,13 +125,25 @@ const OrganizationResolver: Resolvers = {
       return succeeded;
     },
     createOrganizationAnnouncement: async (parent, args, context, info) => {
+      const { groupIds } = args;
       const announcement = await createOrganizationAnnouncement({
         context,
         ...args
       });
+      const notification = createAnnouncementNotification({ announcement });
+      let users = [];
+      if (groupIds && groupIds.length > 0) {
+        const members = await getAcceptedGroupMembersByGroupIds({ context, groupIds });
+      } else {
+        const members = await getAcceptedOrganizationMembers({
+          context,
+          organizationId: announcement.organizationId
+        });
+      }
+      await sendOrganizationNotifications({ notificationSettings, users, notification });
       await sendAnnouncementNotification({
         announcement,
-        groupIds: args.groupIds,
+        groupIds,
         db: context.db
       });
       return announcement;

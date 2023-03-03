@@ -25,11 +25,12 @@ export interface NotificationDetails {
   appLink?: string;
 }
 
-export const sendOrganizationNotifications = async (
-  notificationSettings: OrganizationNotificationSetting,
-  users: User[],
-  notification: NotificationDetails
-) => {
+export const sendOrganizationNotifications = async (data: {
+  notificationSettings: OrganizationNotificationSetting;
+  users: User[];
+  notification: NotificationDetails;
+}) => {
+  const { notificationSettings, users, notification } = data;
   if (notificationSettings.emailEnabled) {
     await emailService.sendEmail(users, notification.subject, notification.message);
   }
@@ -42,11 +43,12 @@ export const sendOrganizationNotifications = async (
   }
 };
 
-export const sendGroupNotifications = async (
-  notificationSettings: GroupNotificationSetting,
-  users: User[],
-  notification: NotificationDetails
-) => {
+export const sendGroupNotifications = async (data: {
+  notificationSettings: GroupNotificationSetting;
+  users: User[];
+  notification: NotificationDetails;
+}) => {
+  const { notificationSettings, users, notification } = data;
   if (notificationSettings.emailEnabled) {
     await emailService.sendEmail(users, notification.subject, notification.message);
   }
@@ -59,7 +61,7 @@ export const sendGroupNotifications = async (
   }
 };
 
-export const createAnnouncementNotification = async (data: { announcement: Announcement }) => {
+export const createAnnouncementNotification = (data: { announcement: Announcement }) => {
   const { announcement } = data;
 
   return {

@@ -107,6 +107,38 @@ export const getGroupMembers = async (data: {
   };
 };
 
+export const getAcceptedGroupMembersByGroupIds = async (data: {
+  context: Context;
+  groupIds: number[];
+}) => {
+  const { context, groupIds } = data;
+  const uniqueUsers = new Map<number, User>();
+  const groups = await context.db.group.findMany({
+    where: {
+      OR: groupIds.map((id) => ({ id: id }))
+    },
+    include: {
+      members: {
+        where: {
+          organizationMember: {
+            status: "accepted"
+          }
+        },
+        include: {
+          user: true
+        }
+      }
+    }
+  });
+  groups.forEach((group) => {
+    group.members.forEach((member) => {
+      uniqueUsers.set(member.userId, member.user);
+    });
+  });
+  const users = Array.from(uniqueUsers).map((item) => item[1]);
+  return users;
+};
+
 export const createGroup = async (data: {
   context: Context;
   name: string;
@@ -326,33 +358,4 @@ export const removeMembers = async (data: {
     succeeded,
     failed
   };
-};
-
-export const getGroupMembersByGroupIds = async (data: { context: Context; groupIds: number[] }) => {
-  const { context, groupIds } = data;
-  const uniqueUsers = new Map();
-  const groups = await context.db.group.findMany({
-    where: {
-      OR: groupIds.map((id) => ({ id: id }))
-    },
-    include: {
-      members: {
-        where: {
-          organizationMember: {
-            status: "accepted"
-          }
-        },
-        include: {
-          user: true
-        }
-      }
-    }
-  });
-  groups.forEach((group) => {
-    group.members.forEach((member) => {
-      uniqueUsers.set(member.userId, member.user);
-    });
-  });
-  const users = Array.from(uniqueUsers).map((item) => item[1]);
-  return users;
 };
