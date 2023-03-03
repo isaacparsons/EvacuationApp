@@ -14,6 +14,14 @@ export declare const USER2: {
     accountCreated: boolean;
     password: string;
 };
+export declare const USER3: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    accountCreated: boolean;
+    password: string;
+};
 export declare const ORG_NOTIFICATION_SETTINGS: {
     emailEnabled: boolean;
     pushEnabled: boolean;

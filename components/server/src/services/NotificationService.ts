@@ -1,207 +1,146 @@
 import {
   Announcement,
   EvacuationEvent,
+  Group,
   Organization,
   OrganizationMember,
   OrganizationNotificationSetting,
   PrismaClient,
-  User
+  User,
+  GroupNotificationSetting
 } from "@prisma/client";
 
-import { GroupNotificationSetting } from "../generated/graphql";
 import { Context } from "../context";
 import EmailService from "./EmailService";
 import PushNotificationService from "./PushNotificationService";
 import TokenService from "./TokenService";
 
-interface SendAlertNotifications {
-  db: PrismaClient;
-  evacuationEvent: EvacuationEvent;
-}
-
 const emailService = new EmailService();
 const pushNotificationService = new PushNotificationService();
 const tokenService = new TokenService();
 
-const getGroup = async (db: PrismaClient, groupId: number) => {
-  return db.group.findUnique({
-    where: {
-      id: groupId
-    },
-    include: {
-      notificationSetting: true,
-      members: {
-        include: {
-          user: true,
-          organizationMember: true
-        }
-      }
-    }
-  });
-};
+export interface NotificationDetails {
+  subject: string;
+  message: string;
+  appLink?: string;
+}
 
-export const getAcceptedGroupMembers = async (db: PrismaClient, groupId: number) => {
-  return db.group.findMany({
-    where: {
-      id: groupId
-    },
-    include: {
-      members: {
-        where: {
-          organizationMember: {
-            status: "accepted"
-          }
-        }
-      }
-    }
-  });
-};
-
-const getOrganization = async (db: PrismaClient, organizationId: number) => {
-  return db.organization.findUnique({
-    where: {
-      id: organizationId
-    },
-    include: {
-      notificationSetting: true,
-      members: {
-        where: {
-          status: "accepted"
-        },
-        include: {
-          user: true
-        }
-      }
-    }
-  });
-};
-
-const getGroupMembersByGroupIds = async (db: PrismaClient, groupIds: number[]) => {
-  const groups = await Promise.all(
-    groupIds.map(async (groupId) => {
-      return db.group.findUnique({
-        where: {
-          id: groupId
-        },
-        include: {
-          members: {
-            include: {
-              user: true
-            }
-          }
-        }
-      });
-    })
-  );
-  const users = groups.reduce((prev, group) => {
-    const groupUsers = group?.members.map((member) => member.user) ?? [];
-    return [...prev, ...groupUsers];
-  }, []);
-  return users;
-};
-
-const sendOrganizationNotifications = async (
+export const sendOrganizationNotifications = async (
   notificationSettings: OrganizationNotificationSetting,
   users: User[],
-  subject: string,
-  message: string,
-  appLink?: string
+  notification: NotificationDetails
 ) => {
   if (notificationSettings.emailEnabled) {
-    await emailService.sendEmail(users, subject, message);
+    await emailService.sendEmail(users, notification.subject, notification.message);
   }
   if (notificationSettings.pushEnabled) {
-    await pushNotificationService.sendNotifications(users, message, appLink);
-  }
-};
-
-const sendGroupNotifications = async (
-  notificationSettings: GroupNotificationSetting,
-  users: User[],
-  subject: string,
-  message: string,
-  appLink?: string
-) => {
-  if (notificationSettings.emailEnabled) {
-    await emailService.sendEmail(users, subject, message);
-  }
-  if (notificationSettings.pushEnabled) {
-    await pushNotificationService.sendNotifications(users, message, appLink);
-  }
-};
-
-export const sendAnnouncementNotification = async (data: {
-  db: PrismaClient;
-  announcement: Announcement;
-  groupIds?: number[] | null;
-}) => {
-  const { db, announcement, groupIds } = data;
-  const organization = await getOrganization(db, announcement.organizationId);
-  let users: User[] = [];
-  if (groupIds) {
-    users = await getGroupMembersByGroupIds(db, groupIds);
-  } else {
-    users = organization?.members.map((member) => member.user) ?? [];
-  }
-
-  if (!users || users.length === 0 || !organization) {
-    return;
-  }
-  const subject = `Announcement - ${announcement.title}`;
-  // const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-
-  if (organization?.notificationSetting) {
-    await sendOrganizationNotifications(
-      organization?.notificationSetting,
+    await pushNotificationService.sendNotifications(
       users,
-      subject,
-      announcement.description || ""
+      notification.message,
+      notification.appLink
     );
   }
 };
 
-export const sendAlertNotification = async (data: SendAlertNotifications) => {
-  const { db, evacuationEvent } = data;
-
-  const group = await getGroup(db, evacuationEvent.groupId);
-  const filteredGroupMembers = group?.members.filter(
-    (member) => member.organizationMember.status === "accepted"
-  );
-  const users = filteredGroupMembers?.map((member) => member.user);
-
-  if (!users || users.length === 0 || !group) {
-    return;
+export const sendGroupNotifications = async (
+  notificationSettings: GroupNotificationSetting,
+  users: User[],
+  notification: NotificationDetails
+) => {
+  if (notificationSettings.emailEnabled) {
+    await emailService.sendEmail(users, notification.subject, notification.message);
   }
-  const subject = "Evacuation Alert!";
-  const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-  const message = `Evacuation issued for ${group.name} \n message: ${evacuationEvent.message}`;
-
-  if (group?.notificationSetting) {
-    await sendGroupNotifications(group?.notificationSetting, users, subject, message, appLink);
+  if (notificationSettings.pushEnabled) {
+    await pushNotificationService.sendNotifications(
+      users,
+      notification.message,
+      notification.appLink
+    );
   }
 };
 
-export const sendAlertEndedNotification = async (data: SendAlertNotifications) => {
-  const { db, evacuationEvent } = data;
+export const createAnnouncementNotification = async (data: { announcement: Announcement }) => {
+  const { announcement } = data;
 
-  const group = await getGroup(db, evacuationEvent.groupId);
-  const filteredGroupMembers = group?.members.filter(
-    (member) => member.organizationMember.status === "accepted"
-  );
-  const users = filteredGroupMembers?.map((member) => member.user);
-
-  if (!users || users.length === 0 || !group) {
-    return;
-  }
-
-  const subject = "Evacuation status update: safe to return";
-  const message = `Evacuation for ${group.name} has ended, it is now safe to return`;
-  const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
-
-  if (group?.notificationSetting) {
-    await sendGroupNotifications(group?.notificationSetting, users, subject, message, appLink);
-  }
+  return {
+    subject: `Announcement - ${announcement.title}`,
+    message: announcement.description || ""
+  };
 };
+// export const sendAnnouncementNotification = async (data: {
+//   announcement: Announcement;
+//   users: User[];
+//   notificationSetting: OrganizationNotificationSetting;
+//   groupIds?: number[] | null;
+// }) => {
+//   const { users, notificationSetting, announcement } = data;
+
+//   const subject = `Announcement - ${announcement.title}`;
+//   // const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
+
+//   await sendOrganizationNotifications(
+//     notificationSetting,
+//     users,
+//     subject,
+//     announcement.description || ""
+//   );
+// };
+
+export const createAlertNotification = async (data: {
+  evacuationEvent: EvacuationEvent;
+  group: Group;
+}) => {
+  const { group, evacuationEvent } = data;
+
+  return {
+    subject: "Evacuation Alert!",
+    message: `Evacuation issued for ${group.name} \n message: ${evacuationEvent.message}`,
+    appLink: `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`
+  };
+};
+
+// export const sendAlertNotification = async (data: {
+//   users: User[];
+//   evacuationEvent: EvacuationEvent;
+//   group: Group;
+//   notificationSetting: GroupNotificationSetting;
+// }) => {
+//   const { group, users, evacuationEvent, notificationSetting } = data;
+
+//   const subject = "Evacuation Alert!";
+//   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
+//   const message = `Evacuation issued for ${group.name} \n message: ${evacuationEvent.message}`;
+
+//   await sendGroupNotifications(notificationSetting, users, subject, message, appLink);
+// };
+
+export const createAlertEndedNotification = async (data: {
+  evacuationEvent: EvacuationEvent;
+  group: Group;
+}) => {
+  const { group, evacuationEvent } = data;
+
+  return {
+    subject: "Evacuation status update: safe to return",
+    message: `Evacuation for ${group.name} has ended, it is now safe to return`,
+    appLink: `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`
+  };
+};
+
+// export const sendAlertEndedNotification = async (data: {
+//   users: User[];
+//   evacuationEvent: EvacuationEvent;
+//   group: Group;
+//   notificationSetting: GroupNotificationSetting;
+// }) => {
+//   const { group, users, evacuationEvent, notificationSetting } = data;
+
+//   const subject = "Evacuation status update: safe to return";
+//   const message = `Evacuation for ${group.name} has ended, it is now safe to return`;
+//   const appLink = `${process.env.APP_LINK}group/${evacuationEvent.groupId}/evacuation/${evacuationEvent.id}`;
+
+//   await sendGroupNotifications(notificationSetting, users, subject, message, appLink);
+// };
 
 export const sendPasswordResetNotification = async (user: User) => {
   const token = tokenService.create(user);
@@ -215,33 +154,17 @@ export const sendPasswordResetNotification = async (user: User) => {
 
 export const sendCompleteSignupNotifications = async (data: {
   context: Context;
-  organizationId: number;
-  members: Array<
-    OrganizationMember & {
-      user: User;
-    }
-  >;
+  organization: Organization;
+  users: User[];
 }) => {
-  const { members, organizationId, context } = data;
-
-  const organization = await context.db.organization.findUnique({
-    where: {
-      id: organizationId
-    }
-  });
-
-  if (!organization) {
-    throw new Error(`Organization with id: ${organizationId} does not exist`);
-  }
+  const { organization, users, context } = data;
 
   await Promise.all(
-    members.map(async (member) => {
+    users.map(async (user) => {
       try {
-        await sendCompleteSignupNotification(member.user, organization);
+        await sendCompleteSignupNotification(user, organization);
       } catch (error) {
-        context.log.error(
-          `Failed to send complete signup email to user with email: ${member.user.email}`
-        );
+        context.log.error(`Failed to send complete signup email to user with email: ${user.email}`);
       }
     })
   );

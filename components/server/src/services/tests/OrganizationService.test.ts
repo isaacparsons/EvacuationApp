@@ -5,7 +5,6 @@ import {
   removeFromOrganization
 } from "../OrganizationService";
 import { USER1, USER2 } from "../../dev/testData";
-// import { OrganizationMember, User } from "../../../dist/generated/graphql";
 import { Prisma, OrganizationMember, User } from "@prisma/client";
 import { RequestError } from "../../util/errors";
 

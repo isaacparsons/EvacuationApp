@@ -23,5 +23,7 @@ export default class Mailhog {
     getEmails(): Promise<MailhogEmail[]>;
     getSender(email: MailhogEmail): string;
     getRecepients(email: MailhogEmail): string[];
+    getSubject(email: MailhogEmail): string;
+    getBody(email: MailhogEmail): string;
 }
 export {};

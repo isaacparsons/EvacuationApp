@@ -24,7 +24,7 @@
     "generate:types": "graphql-codegen --config codegen.yml",
     "start-db": "dotenv -e .env.dev npm run docker:up && dotenv -e .env.dev npx prisma migrate dev --preview-feature --skip-generate --name \"init\" && dotenv -e .env.dev npx prisma generate",
     "migrate": "dotenv -e .env.dev npx prisma migrate dev --preview-feature --skip-generate --name \"init\" && dotenv -e .env.dev npx prisma generate",
-    "migrate-prod": "dotenv -e .env npx prisma migrate deploy && dotenv -e .env npx prisma generate",
+    "migrate-prod": "dotenv -e .env npx prisma migrate deploy",
     "prisma-studio": "dotenv -e .env.dev npx prisma studio",
     "test:lint": "tslint --project . && prettier \"src/**/*.ts\" --list-different",
     "test:types": "tsc -p . --noEmit",
@@ -39,7 +39,8 @@
     "destroy": "npm run docker:down",
     "build": "tsc",
     "postbuild": "copyfiles package*.json dist",
-    "seed-db": "dotenv -e .env.dev npx prisma db seed"
+    "seed-db": "dotenv -e .env.dev npx prisma db seed",
+    "test-query": "dotenv -e .env.dev npx ts-node ./src/test.ts"
   },
   "husky": {
     "hooks": {

@@ -17,15 +17,6 @@ export const getGroup = async (data: { context: Context; groupId: number }) => {
           organizationMember: true
         }
       },
-      evacuationEvents: {
-        include: {
-          responses: {
-            include: {
-              user: true
-            }
-          }
-        }
-      },
       notificationSetting: true
     }
   });
@@ -335,4 +326,33 @@ export const removeMembers = async (data: {
     succeeded,
     failed
   };
+};
+
+export const getGroupMembersByGroupIds = async (data: { context: Context; groupIds: number[] }) => {
+  const { context, groupIds } = data;
+  const uniqueUsers = new Map();
+  const groups = await context.db.group.findMany({
+    where: {
+      OR: groupIds.map((id) => ({ id: id }))
+    },
+    include: {
+      members: {
+        where: {
+          organizationMember: {
+            status: "accepted"
+          }
+        },
+        include: {
+          user: true
+        }
+      }
+    }
+  });
+  groups.forEach((group) => {
+    group.members.forEach((member) => {
+      uniqueUsers.set(member.userId, member.user);
+    });
+  });
+  const users = Array.from(uniqueUsers).map((item) => item[1]);
+  return users;
 };

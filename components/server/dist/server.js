@@ -1,20 +1,14 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.server = void 0;
 const schema_1 = require("@graphql-tools/schema");
-const client_1 = require("@prisma/client");
 const apollo_server_1 = require("apollo-server");
 const fs_1 = require("fs");
 const graphql_middleware_1 = require("graphql-middleware");
-const logger_1 = __importDefault(require("./config/logger"));
 const resolver_1 = require("./graphql/resolver");
 const index_1 = require("./permissions/index");
 const error_1 = require("./plugins/error");
-const TokenService_1 = __importDefault(require("./services/TokenService"));
-const tokenService = new TokenService_1.default();
+const context_1 = require("./context");
 const typeDefs = (0, fs_1.readFileSync)("src/graphql/schema.graphql", {
     encoding: "utf-8"
 });
@@ -23,27 +17,9 @@ let schema = (0, schema_1.makeExecutableSchema)({
     resolvers: resolver_1.resolvers
 });
 schema = (0, graphql_middleware_1.applyMiddleware)(schema, index_1.permissions);
-const auth = async ({ req }) => {
-    const log = (0, logger_1.default)("Kiwitinohk Communications App");
-    const prisma = new client_1.PrismaClient();
-    const result = { db: prisma, log };
-    if (req.headers.authorization) {
-        const token = req.headers.authorization.replace("Bearer ", "");
-        const { userId } = tokenService.verify(token);
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-        if (!user) {
-            throw new Error("User does not exist for the given access token");
-        }
-        result.log = (0, logger_1.default)("Kiwitinohk Communications App", { userId: user.id });
-        result.user = user;
-    }
-    return result;
-};
 exports.server = new apollo_server_1.ApolloServer({
     schema,
-    context: auth,
+    context: context_1.auth,
     plugins: [error_1.GraphQLErrorsHandler]
 });
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic2VydmVyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vc3JjL3NlcnZlci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7QUFBQSxrREFBNkQ7QUFFN0QsMkNBQThDO0FBQzlDLGlEQUE2QztBQUM3QywyQkFBa0M7QUFDbEMsMkRBQXFEO0FBQ3JELDZEQUFxQztBQUNyQyxpREFBK0M7QUFDL0MsK0NBQWtEO0FBQ2xELDJDQUF1RDtBQUN2RCwyRUFBbUQ7QUFFbkQsTUFBTSxZQUFZLEdBQUcsSUFBSSxzQkFBWSxFQUFFLENBQUM7QUFFeEMsTUFBTSxRQUFRLEdBQUcsSUFBQSxpQkFBWSxFQUFDLDRCQUE0QixFQUFFO0lBQzFELFFBQVEsRUFBRSxPQUFPO0NBQ2xCLENBQUMsQ0FBQztBQUVILElBQUksTUFBTSxHQUFHLElBQUEsNkJBQW9CLEVBQVU7SUFDekMsUUFBUTtJQUNSLFNBQVMsRUFBVCxvQkFBUztDQUNWLENBQUMsQ0FBQztBQUNILE1BQU0sR0FBRyxJQUFBLG9DQUFlLEVBQUMsTUFBTSxFQUFFLG1CQUFXLENBQUMsQ0FBQztBQVE5QyxNQUFNLElBQUksR0FBRyxLQUFLLEVBQUUsRUFBRSxHQUFHLEVBQUUsRUFBRSxFQUFFO0lBQzdCLE1BQU0sR0FBRyxHQUFHLElBQUEsZ0JBQU0sRUFBQywrQkFBK0IsQ0FBQyxDQUFDO0lBQ3BELE1BQU0sTUFBTSxHQUFpQixJQUFJLHFCQUFZLEVBQUUsQ0FBQztJQUNoRCxNQUFNLE1BQU0sR0FBWSxFQUFFLEVBQUUsRUFBRSxNQUFNLEVBQUUsR0FBRyxFQUFFLENBQUM7SUFDNUMsSUFBSSxHQUFHLENBQUMsT0FBTyxDQUFDLGFBQWEsRUFBRTtRQUM3QixNQUFNLEtBQUssR0FBRyxHQUFHLENBQUMsT0FBTyxDQUFDLGFBQWEsQ0FBQyxPQUFPLENBQUMsU0FBUyxFQUFFLEVBQUUsQ0FBQyxDQUFDO1FBQy9ELE1BQU0sRUFBRSxNQUFNLEVBQUUsR0FBRyxZQUFZLENBQUMsTUFBTSxDQUFDLEtBQUssQ0FBQyxDQUFDO1FBQzlDLE1BQU0sSUFBSSxHQUFHLE1BQU0sTUFBTSxDQUFDLElBQUksQ0FBQyxVQUFVLENBQUM7WUFDeEMsS0FBSyxFQUFFLEVBQUUsRUFBRSxFQUFFLE1BQU0sRUFBRTtTQUN0QixDQUFDLENBQUM7UUFFSCxJQUFJLENBQUMsSUFBSSxFQUFFO1lBQ1QsTUFBTSxJQUFJLEtBQUssQ0FBQyxnREFBZ0QsQ0FBQyxDQUFDO1NBQ25FO1FBQ0QsTUFBTSxDQUFDLEdBQUcsR0FBRyxJQUFBLGdCQUFNLEVBQUMsK0JBQStCLEVBQUUsRUFBRSxNQUFNLEVBQUUsSUFBSSxDQUFDLEVBQUUsRUFBRSxDQUFDLENBQUM7UUFDMUUsTUFBTSxDQUFDLElBQUksR0FBRyxJQUFJLENBQUM7S0FDcEI7SUFDRCxPQUFPLE1BQU0sQ0FBQztBQUNoQixDQUFDLENBQUM7QUFFVyxRQUFBLE1BQU0sR0FBRyxJQUFJLDRCQUFZLENBQUM7SUFDckMsTUFBTTtJQUNOLE9BQU8sRUFBRSxJQUFJO0lBQ2IsT0FBTyxFQUFFLENBQUMsNEJBQW9CLENBQUM7Q0FDaEMsQ0FBQyxDQUFDIn0=
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic2VydmVyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vc3JjL3NlcnZlci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7QUFBQSxrREFBNkQ7QUFDN0QsaURBQTZDO0FBQzdDLDJCQUFrQztBQUNsQywyREFBcUQ7QUFDckQsaURBQStDO0FBQy9DLCtDQUFrRDtBQUNsRCwyQ0FBdUQ7QUFDdkQsdUNBQTBDO0FBRTFDLE1BQU0sUUFBUSxHQUFHLElBQUEsaUJBQVksRUFBQyw0QkFBNEIsRUFBRTtJQUMxRCxRQUFRLEVBQUUsT0FBTztDQUNsQixDQUFDLENBQUM7QUFFSCxJQUFJLE1BQU0sR0FBRyxJQUFBLDZCQUFvQixFQUFVO0lBQ3pDLFFBQVE7SUFDUixTQUFTLEVBQVQsb0JBQVM7Q0FDVixDQUFDLENBQUM7QUFDSCxNQUFNLEdBQUcsSUFBQSxvQ0FBZSxFQUFDLE1BQU0sRUFBRSxtQkFBVyxDQUFDLENBQUM7QUFFakMsUUFBQSxNQUFNLEdBQUcsSUFBSSw0QkFBWSxDQUFDO0lBQ3JDLE1BQU07SUFDTixPQUFPLEVBQUUsY0FBSTtJQUNiLE9BQU8sRUFBRSxDQUFDLDRCQUFvQixDQUFDO0NBQ2hDLENBQUMsQ0FBQyJ9

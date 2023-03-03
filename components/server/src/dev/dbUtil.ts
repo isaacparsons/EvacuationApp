@@ -9,7 +9,7 @@ import {
   Organization,
   GroupNotificationSetting,
   GroupNotificationSettingInput
-} from "../../dist/generated/graphql";
+} from "../generated/graphql";
 import { GROUP, GROUP_NOTIFICATION_SETTING, ORG, ORG_NOTIFICATION_SETTINGS } from "./testData";
 
 const prisma = new PrismaClient();

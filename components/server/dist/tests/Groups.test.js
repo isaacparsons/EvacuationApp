@@ -4,6 +4,8 @@ const client_1 = require("@prisma/client");
 const dbUtil_1 = require("../dev/dbUtil");
 const testData_1 = require("../dev/testData");
 const server_1 = require("../server");
+const dbUtil_2 = require("../dev/dbUtil");
+const organizations_1 = require("../dev/gql/organizations");
 const groups_1 = require("../dev/gql/groups");
 const prisma = new client_1.PrismaClient();
 describe("group tests", () => {
@@ -13,18 +15,8 @@ describe("group tests", () => {
     describe("Create group", () => {
         it("org admin should be able to create a group in an organization", async () => {
             const { user, token } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
-            const org = await prisma.organization.create({
-                data: Object.assign(Object.assign({}, testData_1.ORG), { notificationSetting: {
-                        create: testData_1.ORG_NOTIFICATION_SETTINGS
-                    } })
-            });
-            const orgMember = await prisma.organizationMember.create({
-                data: Object.assign(Object.assign({ organization: {
-                        connect: { id: org.id }
-                    } }, testData_1.ORG_ADMIN_MEMBER), { user: {
-                        connect: { id: user.id }
-                    } })
-            });
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const adminOrgMember = await (0, dbUtil_1.createAdminOrgMember)(prisma, user, org);
             const result = await server_1.server.executeOperation({
                 query: groups_1.CREATE_GROUP,
                 variables: {
@@ -48,7 +40,7 @@ describe("group tests", () => {
                         id: expect.any(Number),
                         userId: user.id,
                         groupId: groupInDb === null || groupInDb === void 0 ? void 0 : groupInDb.id,
-                        organizationMemberId: orgMember.id,
+                        organizationMemberId: adminOrgMember.id,
                         admin: true
                     }
                 ] }));
@@ -57,21 +49,9 @@ describe("group tests", () => {
             var _a, _b, _c;
             const adminUser = await (0, dbUtil_1.setupUser)(testData_1.USER1);
             const nonAdminUser = await (0, dbUtil_1.setupUser)(testData_1.USER2);
-            const org = await prisma.organization.create({
-                data: Object.assign(Object.assign({}, testData_1.ORG), { notificationSetting: {
-                        create: testData_1.ORG_NOTIFICATION_SETTINGS
-                    }, members: {
-                        createMany: {
-                            data: [
-                                Object.assign({ userId: adminUser.user.id }, testData_1.ORG_ADMIN_MEMBER),
-                                Object.assign({ userId: nonAdminUser.user.id }, testData_1.ORG_NON_ADMIN_MEMBER)
-                            ]
-                        }
-                    } }),
-                include: {
-                    members: true
-                }
-            });
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const adminOrgMember = await (0, dbUtil_1.createAdminOrgMember)(prisma, adminUser.user, org);
+            const nonAdminOrgMember = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, nonAdminUser.user, org);
             const result = await server_1.server.executeOperation({
                 query: groups_1.CREATE_GROUP,
                 variables: {
@@ -90,54 +70,12 @@ describe("group tests", () => {
         it("org admin should be able to add users to a group", async () => {
             const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
             const { user: user2, token: token2 } = await (0, dbUtil_1.setupUser)(testData_1.USER2);
-            const org = await prisma.organization.create({
-                data: Object.assign(Object.assign({}, testData_1.ORG), { notificationSetting: {
-                        create: testData_1.ORG_NOTIFICATION_SETTINGS
-                    }, members: {
-                        create: Object.assign({ user: {
-                                connect: { id: user1.id }
-                            } }, testData_1.ORG_ADMIN_MEMBER)
-                    } }),
-                include: {
-                    members: true
-                }
-            });
-            const invitedOrgMember = await prisma.organizationMember.create({
-                data: Object.assign({ user: {
-                        connect: { id: user2.id }
-                    }, organization: {
-                        connect: { id: org.id }
-                    } }, testData_1.ORG_NON_ADMIN_MEMBER)
-            });
-            const group = await prisma.group.create({
-                data: {
-                    name: testData_1.GROUP.name,
-                    organizationId: org.id,
-                    members: {
-                        create: {
-                            organizationMember: {
-                                connect: {
-                                    userId_organizationId: {
-                                        userId: user1.id,
-                                        organizationId: org.id
-                                    }
-                                }
-                            },
-                            admin: false,
-                            user: {
-                                connect: { id: user1.id }
-                            }
-                        }
-                    },
-                    notificationSetting: {
-                        create: testData_1.GROUP_NOTIFICATION_SETTING
-                    }
-                },
-                include: {
-                    members: true,
-                    notificationSetting: true
-                }
-            });
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const orgAdminMember = await (0, dbUtil_1.createAdminOrgMember)(prisma, user1, org);
+            const invitedOrgMember = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user2, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const nonAdminGroupMember1 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user1, org, group);
+            const nonAdminGroupMember2 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user2, org, group);
             const result = await server_1.server.executeOperation({
                 query: groups_1.ADD_USERS_TO_GROUP,
                 variables: {
@@ -167,58 +105,11 @@ describe("group tests", () => {
         it("group admin should be able to add users to a group", async () => {
             const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
             const { user: user2, token: token2 } = await (0, dbUtil_1.setupUser)(testData_1.USER2);
-            const org = await prisma.organization.create({
-                data: Object.assign(Object.assign({}, testData_1.ORG), { notificationSetting: {
-                        create: testData_1.ORG_NOTIFICATION_SETTINGS
-                    }, members: {
-                        create: {
-                            user: {
-                                connect: { id: user1.id }
-                            },
-                            admin: false,
-                            status: "accepted"
-                        }
-                    } }),
-                include: {
-                    members: true
-                }
-            });
-            const invitedOrgMember = await prisma.organizationMember.create({
-                data: Object.assign({ user: {
-                        connect: { id: user2.id }
-                    }, organization: {
-                        connect: { id: org.id }
-                    } }, testData_1.ORG_NON_ADMIN_MEMBER)
-            });
-            const group = await prisma.group.create({
-                data: {
-                    name: testData_1.GROUP.name,
-                    organizationId: org.id,
-                    members: {
-                        create: {
-                            organizationMember: {
-                                connect: {
-                                    userId_organizationId: {
-                                        userId: user1.id,
-                                        organizationId: org.id
-                                    }
-                                }
-                            },
-                            admin: true,
-                            user: {
-                                connect: { id: user1.id }
-                            }
-                        }
-                    },
-                    notificationSetting: {
-                        create: testData_1.GROUP_NOTIFICATION_SETTING
-                    }
-                },
-                include: {
-                    members: true,
-                    notificationSetting: true
-                }
-            });
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const adminOrgMember = await (0, dbUtil_1.createAdminOrgMember)(prisma, user1, org);
+            const invitedOrgMember = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user2, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const adminGroupMember = await (0, dbUtil_1.createAdminGroupMember)(prisma, user1, org, group);
             const result = await server_1.server.executeOperation({
                 query: groups_1.ADD_USERS_TO_GROUP,
                 variables: {
@@ -245,35 +136,260 @@ describe("group tests", () => {
                 admin: false
             });
         });
-        // it('non org/group admin should not be able to add users to a group', async () => {})
+        it("non org/group admin should not be able to add users to a group", async () => {
+            var _a, _b, _c;
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const { user: user2, token: token2 } = await (0, dbUtil_1.setupUser)(testData_1.USER2);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const nonAdminOrgMember1 = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user1, org);
+            const nonAdminOrgMember2 = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user2, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const nonAdminGroupMember1 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user1, org, group);
+            const result = await server_1.server.executeOperation({
+                query: groups_1.ADD_USERS_TO_GROUP,
+                variables: {
+                    groupId: group.id,
+                    users: [
+                        {
+                            userId: user2.id,
+                            admin: false
+                        }
+                    ]
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            const groupMemberInDb = await prisma.groupMember.findFirst({
+                where: {
+                    groupId: group.id,
+                    userId: user2.id
+                }
+            });
+            expect((_a = result.errors) === null || _a === void 0 ? void 0 : _a.length).toEqual(1);
+            expect((_c = (_b = result.errors) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.message).toEqual("Not Authorised!");
+            expect(groupMemberInDb).toBeNull();
+        });
     });
-    // describe("Remove users", () => {
-    //   it('org admin should be able to remove users from a group', async () => {})
-    //   it('group admin should be able to remove users from a group', async () => {})
-    //   it('non org/group admin should not be able to remove users from a group', async () => {})
-    // })
-    // describe("Update notification settings", () => {
-    //   it('org admin should be able to update notification settings for a group', async () => {})
-    //   it('group admin should be able to update notification settings for a group', async () => {})
-    //   it('non group/org admin should not be able to update notification settings for a group', async () => {})
-    // })
-    // describe("get groups for org admin", () => {
-    //   it('should get groups created by them and group created by other user', async () => {})
-    // })
-    // describe("get groups for org non admin", () => {
-    //   it('should get group they are member of and not get group they are not member of', async () => {})
-    // })
+    describe("Remove users", () => {
+        it("org admin should be able to remove users from a group", async () => {
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const { user: user2, token: token2 } = await (0, dbUtil_1.setupUser)(testData_1.USER2);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const adminOrgMember = await (0, dbUtil_1.createAdminOrgMember)(prisma, user1, org);
+            const nonAdminOrgMember = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user2, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const nonAdminGroupMember1 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user1, org, group);
+            const nonAdminGroupMember2 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user2, org, group);
+            const result = await server_1.server.executeOperation({
+                query: groups_1.REMOVE_USERS,
+                variables: {
+                    groupId: group.id,
+                    userIds: [user2.id]
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            const groupMemberInDb = await prisma.groupMember.findFirst({
+                where: {
+                    groupId: group.id,
+                    userId: user2.id
+                }
+            });
+            expect(groupMemberInDb).toBeNull();
+        });
+        it("group admin should be able to remove users from a group", async () => {
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const { user: user2, token: token2 } = await (0, dbUtil_1.setupUser)(testData_1.USER2);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const nonAdminOrgMember1 = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user1, org);
+            const nonAdminOrgMember2 = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user2, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const adminGroupMember1 = await (0, dbUtil_1.createAdminGroupMember)(prisma, user1, org, group);
+            const nonAdminGroupMember2 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user2, org, group);
+            const result = await server_1.server.executeOperation({
+                query: groups_1.REMOVE_USERS,
+                variables: {
+                    groupId: group.id,
+                    userIds: [user2.id]
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            const groupMemberInDb = await prisma.groupMember.findFirst({
+                where: {
+                    groupId: group.id,
+                    userId: user2.id
+                }
+            });
+            expect(groupMemberInDb).toBeNull();
+        });
+        it("non org/group admin should not be able to remove users from a group", async () => {
+            var _a, _b, _c;
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const { user: user2, token: token2 } = await (0, dbUtil_1.setupUser)(testData_1.USER2);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const nonAdminOrgMember1 = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user1, org);
+            const nonAdminOrgMember2 = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user2, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const nonAdminGroupMember1 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user1, org, group);
+            const nonAdminGroupMember2 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user2, org, group);
+            const result = await server_1.server.executeOperation({
+                query: groups_1.REMOVE_USERS,
+                variables: {
+                    groupId: group.id,
+                    userIds: [user2.id]
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            const groupMemberInDb = await prisma.groupMember.findFirst({
+                where: {
+                    groupId: group.id,
+                    userId: user2.id
+                }
+            });
+            expect((_a = result.errors) === null || _a === void 0 ? void 0 : _a.length).toEqual(1);
+            expect((_c = (_b = result.errors) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.message).toEqual("Not Authorised!");
+            expect(groupMemberInDb).toBeDefined();
+        });
+    });
+    describe("Update notification settings", () => {
+        it("org admin should be able to update notification settings for a group", async () => {
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const adminOrgMember = await (0, dbUtil_1.createAdminOrgMember)(prisma, user1, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const nonAdminGroupMember1 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user1, org, group);
+            const updatedGroupNotificationSettings = {
+                emailEnabled: true,
+                smsEnabled: true,
+                pushEnabled: true
+            };
+            const result = await server_1.server.executeOperation({
+                query: groups_1.UPDATE_NOTIFICATION_SETTINGS,
+                variables: {
+                    groupId: group.id,
+                    groupNotificationSetting: updatedGroupNotificationSettings
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            const groupNotificationSettingsInDb = await prisma.groupNotificationSetting.findFirst({
+                where: {
+                    groupId: group.id
+                }
+            });
+            expect(groupNotificationSettingsInDb).toEqual(Object.assign({ id: expect.any(Number), groupId: group.id }, updatedGroupNotificationSettings));
+        });
+        it("group admin should be able to update notification settings for a group", async () => {
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const nonAdminOrgMember = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user1, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const adminGroupMember1 = await (0, dbUtil_1.createAdminGroupMember)(prisma, user1, org, group);
+            const updatedGroupNotificationSettings = {
+                emailEnabled: true,
+                smsEnabled: true,
+                pushEnabled: true
+            };
+            const result = await server_1.server.executeOperation({
+                query: groups_1.UPDATE_NOTIFICATION_SETTINGS,
+                variables: {
+                    groupId: group.id,
+                    groupNotificationSetting: updatedGroupNotificationSettings
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            const groupNotificationSettingsInDb = await prisma.groupNotificationSetting.findFirst({
+                where: {
+                    groupId: group.id
+                }
+            });
+            expect(groupNotificationSettingsInDb).toEqual(Object.assign({ id: expect.any(Number), groupId: group.id }, updatedGroupNotificationSettings));
+        });
+        it("non group/org admin should not be able to update notification settings for a group", async () => {
+            var _a, _b, _c;
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const nonAdminOrgMember = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user1, org);
+            const group = await (0, dbUtil_1.createGroup)({ db: prisma, org });
+            const adminGroupMember1 = await (0, dbUtil_1.createNonAdminGroupMember)(prisma, user1, org, group);
+            const updatedGroupNotificationSettings = {
+                emailEnabled: true,
+                smsEnabled: true,
+                pushEnabled: true
+            };
+            const result = await server_1.server.executeOperation({
+                query: groups_1.UPDATE_NOTIFICATION_SETTINGS,
+                variables: {
+                    groupId: group.id,
+                    groupNotificationSetting: updatedGroupNotificationSettings
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            const groupNotificationSettingsInDb = await prisma.groupNotificationSetting.findFirst({
+                where: {
+                    groupId: group.id
+                }
+            });
+            expect((_a = result.errors) === null || _a === void 0 ? void 0 : _a.length).toEqual(1);
+            expect((_c = (_b = result.errors) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.message).toEqual("Not Authorised!");
+            expect(groupNotificationSettingsInDb).toEqual(Object.assign({ id: expect.any(Number), groupId: group.id }, testData_1.GROUP_NOTIFICATION_SETTING));
+        });
+    });
+    describe("get groups for org admin", () => {
+        it("should get groups created by them and group created by other users", async () => {
+            var _a, _b;
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const adminOrgMember = await (0, dbUtil_1.createAdminOrgMember)(prisma, user1, org);
+            const group1 = await (0, dbUtil_1.createGroup)({ db: prisma, org, groupName: "test group 1" });
+            const group2 = await (0, dbUtil_1.createGroup)({ db: prisma, org, groupName: "test group 2" });
+            const result = await server_1.server.executeOperation({
+                query: organizations_1.GET_ORGANIZATION,
+                variables: {
+                    organizationId: org.id
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            expect((_b = (_a = result === null || result === void 0 ? void 0 : result.data) === null || _a === void 0 ? void 0 : _a.getOrganization) === null || _b === void 0 ? void 0 : _b.groups).toEqual([
+                {
+                    organizationId: org.id,
+                    id: expect.any(Number),
+                    name: group1.name
+                },
+                {
+                    organizationId: org.id,
+                    id: expect.any(Number),
+                    name: group2.name
+                }
+            ]);
+        });
+    });
+    describe("get groups for org non admin", () => {
+        it("should get group they are member of and not get group they are not a member of", async () => {
+            var _a, _b;
+            const { user: user1, token: token1 } = await (0, dbUtil_1.setupUser)(testData_1.USER1);
+            const org = await (0, dbUtil_2.createOrg)(prisma);
+            const nonAdminOrgMember = await (0, dbUtil_1.createNonAdminOrgMember)(prisma, user1, org);
+            const group1 = await (0, dbUtil_1.createGroup)({ db: prisma, org, groupName: "test group 1" });
+            const group2 = await (0, dbUtil_1.createGroup)({ db: prisma, org, groupName: "test group 2" });
+            const adminGroupMember1 = await (0, dbUtil_1.createAdminGroupMember)(prisma, user1, org, group1);
+            const result = await server_1.server.executeOperation({
+                query: organizations_1.GET_ORGANIZATION_FOR_USER,
+                variables: {
+                    organizationId: org.id
+                }
+            }, { req: { headers: { authorization: `Bearer ${token1}` } } });
+            expect((_b = (_a = result === null || result === void 0 ? void 0 : result.data) === null || _a === void 0 ? void 0 : _a.getOrganizationForUser) === null || _b === void 0 ? void 0 : _b.groups).toEqual([
+                {
+                    id: expect.any(Number),
+                    userId: user1.id,
+                    groupId: group1.id,
+                    organizationMemberId: nonAdminOrgMember.id,
+                    organizationMember: {
+                        id: expect.any(Number),
+                        status: "accepted",
+                        userId: user1.id,
+                        admin: false,
+                        organizationId: org.id
+                    },
+                    admin: true,
+                    group: {
+                        organizationId: org.id,
+                        id: expect.any(Number),
+                        name: group1.name
+                    }
+                }
+            ]);
+        });
+    });
 });
-// org admin should be able to invite users to a group
-// org admin should be able to remove users from a group
-// org admin should be able to delete group
-// org admin should be able to update notification settings
-// org admin should be able to retrieve all groups in an organization
-// group admin should not be able to delete group
-// group admin should be able to invite users to group
-// group admin should be able to remove users from group
-// group admin should be able to update notification settings
-// non org admin should not be able to invite users to a group
-// non org admin should not be able to remove users from a group
-// non org admin should be able to retrieve only groups they have joined
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiR3JvdXBzLnRlc3QuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi9zcmMvdGVzdHMvR3JvdXBzLnRlc3QudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFBQSwyQ0FBOEM7QUFFOUMsMENBQTRFO0FBQzVFLDhDQVd5QjtBQUN6QixzQ0FBbUM7QUFDbkMsOENBQXFFO0FBR3JFLE1BQU0sTUFBTSxHQUFHLElBQUkscUJBQVksRUFBRSxDQUFDO0FBRWxDLFFBQVEsQ0FBQyxhQUFhLEVBQUUsR0FBRyxFQUFFO0lBQzNCLFVBQVUsQ0FBQyxLQUFLLElBQUksRUFBRTtRQUNwQixNQUFNLElBQUEsaUJBQVEsR0FBRSxDQUFDO0lBQ25CLENBQUMsQ0FBQyxDQUFDO0lBRUgsUUFBUSxDQUFDLGNBQWMsRUFBRSxHQUFHLEVBQUU7UUFDNUIsRUFBRSxDQUFDLCtEQUErRCxFQUFFLEtBQUssSUFBSSxFQUFFO1lBQzdFLE1BQU0sRUFBRSxJQUFJLEVBQUUsS0FBSyxFQUFFLEdBQUcsTUFBTSxJQUFBLGtCQUFTLEVBQUMsZ0JBQUssQ0FBQyxDQUFDO1lBRS9DLE1BQU0sR0FBRyxHQUFHLE1BQU0sTUFBTSxDQUFDLFlBQVksQ0FBQyxNQUFNLENBQUM7Z0JBQzNDLElBQUksa0NBQ0MsY0FBRyxLQUNOLG1CQUFtQixFQUFFO3dCQUNuQixNQUFNLEVBQUUsb0NBQXlCO3FCQUNsQyxHQUNGO2FBQ0YsQ0FBQyxDQUFDO1lBQ0gsTUFBTSxTQUFTLEdBQUcsTUFBTSxNQUFNLENBQUMsa0JBQWtCLENBQUMsTUFBTSxDQUFDO2dCQUN2RCxJQUFJLGdDQUNGLFlBQVksRUFBRTt3QkFDWixPQUFPLEVBQUUsRUFBRSxFQUFFLEVBQUUsR0FBRyxDQUFDLEVBQUUsRUFBRTtxQkFDeEIsSUFDRSwyQkFBZ0IsS0FDbkIsSUFBSSxFQUFFO3dCQUNKLE9BQU8sRUFBRSxFQUFFLEVBQUUsRUFBRSxJQUFJLENBQUMsRUFBRSxFQUFFO3FCQUN6QixHQUNGO2FBQ0YsQ0FBQyxDQUFD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
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiR3JvdXBzLnRlc3QuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi9zcmMvdGVzdHMvR3JvdXBzLnRlc3QudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFBQSwyQ0FBOEM7QUFDOUMsMENBUXVCO0FBQ3ZCLDhDQUFrRjtBQUNsRixzQ0FBbUM7QUFDbkMsMENBQTBDO0FBQzFDLDREQUF1RjtBQUN2Riw4Q0FLMkI7QUFFM0IsTUFBTSxNQUFNLEdBQUcsSUFBSSxxQkFBWSxFQUFFLENBQUM7QUFFbEMsUUFBUSxDQUFDLGFBQWEsRUFBRSxHQUFHLEVBQUU7SUFDM0IsVUFBVSxDQUFDLEtBQUssSUFBSSxFQUFFO1FBQ3BCLE1BQU0sSUFBQSxpQkFBUSxHQUFFLENBQUM7SUFDbkIsQ0FBQyxDQUFDLENBQUM7SUFFSCxRQUFRLENBQUMsY0FBYyxFQUFFLEdBQUcsRUFBRTtRQUM1QixFQUFFLENBQUMsK0RBQStELEVBQUUsS0FBSyxJQUFJLEVBQUU7WUFDN0UsTUFBTSxFQUFFLElBQUksRUFBRSxLQUFLLEVBQUUsR0FBRyxNQUFNLElBQUEsa0JBQVMsRUFBQyxnQkFBSyxDQUFDLENBQUM7WUFFL0MsTUFBTSxHQUFHLEdBQUcsTUFBTSxJQUFBLGtCQUFTLEVBQUMsTUFBTSxDQUFDLENBQUM7WUFDcEMsTUFBTSxjQUFjLEdBQUcsTUFBTSxJQUFBLDZCQUFvQixFQUFDLE1BQU0sRUFBRSxJQUFJLEVBQUUsR0FBRyxDQUFDLENBQUM7WUFFckUsTUFBTSxNQUFNLEdBQUcsTUFBTSxlQUFNLENBQUMsZ0JBQWdCLENBQzFDO2dCQUNFLEtBQUssRUFBRSxxQkFBWTtnQkFDbkIsU0FBUyxFQUFFO29CQUNULElBQUksRUFBRSxnQkFBSyxDQUFDLElBQUk7b0JBQ2hCLHdCQUF3QixFQUFFLHFDQUEwQjtvQkFDcEQsY0FBYyxFQUFFLEdBQUcsQ0FBQyxFQUFFO2lCQUN2QjthQUNGLEVBQ0QsRUFBRSxHQUFHLEVBQUUsRUFBRSxPQUFPLEVBQUUsRUFBRSxhQUFh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
