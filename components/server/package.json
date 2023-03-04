@@ -24,7 +24,7 @@
     "generate:types": "graphql-codegen --config codegen.yml",
     "start-db": "dotenv -e .env.dev npm run docker:up && dotenv -e .env.dev npx prisma migrate dev --preview-feature --skip-generate --name \"init\" && dotenv -e .env.dev npx prisma generate",
     "migrate": "dotenv -e .env.dev npx prisma migrate dev --preview-feature --skip-generate --name \"init\" && dotenv -e .env.dev npx prisma generate",
-    "migrate-prod": "dotenv -e .env node node_modules/prisma/build/index.js migrate deploy && dotenv -e .env npx prisma generate",
+    "migrate-prod": "dotenv -e .env node node_modules/prisma/build/index.js migrate deploy",
     "prisma-studio": "dotenv -e .env.dev npx prisma studio",
     "test:types": "tsc -p . --noEmit",
     "dev": "concurrently \"npm run start\" \"npm run client\"",
