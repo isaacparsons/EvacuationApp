@@ -30,8 +30,8 @@ describe("group tests", () => {
     it("org admin should be able to create a group in an organization", async () => {
       const { user, token } = await setupUser(USER1);
 
-      const org = await createOrg(prisma);
-      const adminOrgMember = await createAdminOrgMember(prisma, user, org);
+      const org = await createOrg({ db: prisma });
+      const adminOrgMember = await createAdminOrgMember({ db: prisma, user, org });
 
       await server.executeOperation(
         {
@@ -77,9 +77,9 @@ describe("group tests", () => {
     it("non org admin should not be able to create a group in an organization", async () => {
       const adminUser = await setupUser(USER1);
       const nonAdminUser = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, adminUser.user, org);
-      await createNonAdminOrgMember(prisma, nonAdminUser.user, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: adminUser.user, org });
+      await createNonAdminOrgMember({ db: prisma, user: nonAdminUser.user, org });
       const result = await server.executeOperation(
         {
           query: CREATE_GROUP,
@@ -101,12 +101,12 @@ describe("group tests", () => {
     it("org admin should be able to add users to a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
-      const invitedOrgMember = await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
+      const invitedOrgMember = await createNonAdminOrgMember({ db: prisma, user: user2, org });
       const group = await createGroup({ db: prisma, org });
-      await createNonAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
       await server.executeOperation(
         {
           query: ADD_USERS_TO_GROUP,
@@ -139,11 +139,11 @@ describe("group tests", () => {
     it("group admin should be able to add users to a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
-      const invitedOrgMember = await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
+      const invitedOrgMember = await createNonAdminOrgMember({ db: prisma, user: user2, org });
       const group = await createGroup({ db: prisma, org });
-      await createAdminGroupMember(prisma, user1, org, group);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group });
       await server.executeOperation(
         {
           query: ADD_USERS_TO_GROUP,
@@ -176,12 +176,12 @@ describe("group tests", () => {
     it("non org/group admin should not be able to add users to a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
-      await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
+      await createNonAdminOrgMember({ db: prisma, user: user2, org });
 
       const group = await createGroup({ db: prisma, org });
-      await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
       const result = await server.executeOperation(
         {
           query: ADD_USERS_TO_GROUP,
@@ -212,14 +212,14 @@ describe("group tests", () => {
     it("org admin should be able to remove users from a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
-      await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
+      await createNonAdminOrgMember({ db: prisma, user: user2, org });
 
       const group = await createGroup({ db: prisma, org });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
       await server.executeOperation(
         {
           query: REMOVE_USERS,
@@ -241,14 +241,14 @@ describe("group tests", () => {
     it("group admin should be able to remove users from a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
-      await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
+      await createNonAdminOrgMember({ db: prisma, user: user2, org });
 
       const group = await createGroup({ db: prisma, org });
 
-      await createAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
       await server.executeOperation(
         {
           query: REMOVE_USERS,
@@ -270,14 +270,14 @@ describe("group tests", () => {
     it("non org/group admin should not be able to remove users from a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
-      await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
+      await createNonAdminOrgMember({ db: prisma, user: user2, org });
 
       const group = await createGroup({ db: prisma, org });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
       const result = await server.executeOperation(
         {
           query: REMOVE_USERS,
@@ -302,12 +302,12 @@ describe("group tests", () => {
   describe("Update notification settings", () => {
     it("org admin should be able to update notification settings for a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({ db: prisma, org });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
       const updatedGroupNotificationSettings = {
         emailEnabled: true,
         smsEnabled: true,
@@ -336,12 +336,12 @@ describe("group tests", () => {
     });
     it("group admin should be able to update notification settings for a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({ db: prisma, org });
 
-      await createAdminGroupMember(prisma, user1, org, group);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group });
       const updatedGroupNotificationSettings = {
         emailEnabled: true,
         smsEnabled: true,
@@ -370,12 +370,12 @@ describe("group tests", () => {
     });
     it("non group/org admin should not be able to update notification settings for a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({ db: prisma, org });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
       const updatedGroupNotificationSettings = {
         emailEnabled: true,
         smsEnabled: true,
@@ -408,8 +408,8 @@ describe("group tests", () => {
   describe("get groups for org admin", () => {
     it("should get groups created by them and group created by other users", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
 
       const group1 = await createGroup({ db: prisma, org, groupName: "test group 1" });
       const group2 = await createGroup({ db: prisma, org, groupName: "test group 2" });
@@ -440,13 +440,13 @@ describe("group tests", () => {
   describe("get groups for org non admin", () => {
     it("should get group they are member of and not get group they are not a member of", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      const nonAdminOrgMember = await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      const nonAdminOrgMember = await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group1 = await createGroup({ db: prisma, org, groupName: "test group 1" });
       await createGroup({ db: prisma, org, groupName: "test group 2" });
 
-      await createAdminGroupMember(prisma, user1, org, group1);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group: group1 });
 
       const result = await server.executeOperation(
         {

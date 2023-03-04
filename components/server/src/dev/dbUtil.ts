@@ -42,7 +42,7 @@ export const setupUser = async (data: {
   return { user, token };
 };
 
-export const createOrg = async (db: PrismaClient) => {
+export const createOrg = async ({ db }: { db: PrismaClient }) => {
   return await db.organization.create({
     data: {
       ...ORG,
@@ -53,7 +53,15 @@ export const createOrg = async (db: PrismaClient) => {
   });
 };
 
-export const createAdminOrgMember = async (db: PrismaClient, user: User, org: Organization) => {
+export const createAdminOrgMember = async ({
+  db,
+  user,
+  org
+}: {
+  db: PrismaClient;
+  user: User;
+  org: Organization;
+}) => {
   return await db.organizationMember.create({
     data: {
       user: {
@@ -68,7 +76,15 @@ export const createAdminOrgMember = async (db: PrismaClient, user: User, org: Or
   });
 };
 
-export const createNonAdminOrgMember = async (db: PrismaClient, user: User, org: Organization) => {
+export const createNonAdminOrgMember = async ({
+  db,
+  user,
+  org
+}: {
+  db: PrismaClient;
+  user: User;
+  org: Organization;
+}) => {
   return await db.organizationMember.create({
     data: {
       user: {
@@ -108,12 +124,17 @@ export const createGroup = async ({
   });
 };
 
-export const createAdminGroupMember = async (
-  db: PrismaClient,
-  user: User,
-  org: Organization,
-  group: Group
-) => {
+export const createAdminGroupMember = async ({
+  db,
+  user,
+  org,
+  group
+}: {
+  db: PrismaClient;
+  user: User;
+  org: Organization;
+  group: Group;
+}) => {
   return await db.groupMember.create({
     data: {
       group: {
@@ -137,12 +158,17 @@ export const createAdminGroupMember = async (
   });
 };
 
-export const createNonAdminGroupMember = async (
-  db: PrismaClient,
-  user: User,
-  org: Organization,
-  group: Group
-) => {
+export const createNonAdminGroupMember = async ({
+  db,
+  user,
+  org,
+  group
+}: {
+  db: PrismaClient;
+  user: User;
+  org: Organization;
+  group: Group;
+}) => {
   return await db.groupMember.create({
     data: {
       group: {

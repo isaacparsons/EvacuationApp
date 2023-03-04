@@ -35,9 +35,9 @@ describe("evacuation event tests", () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
       const { user: user3 } = await setupUser(USER3);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
-      await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
+      await createNonAdminOrgMember({ db: prisma, user: user2, org });
       await prisma.organizationMember.create({
         data: {
           user: {
@@ -60,8 +60,8 @@ describe("evacuation event tests", () => {
           smsEnabled: false
         }
       });
-      await createNonAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
 
       await server.executeOperation(
         {
@@ -101,16 +101,16 @@ describe("evacuation event tests", () => {
     });
     it("group admin should be able to create an evacuation event", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      const nonAdminOrgMember1 = await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
-      const adminGroupMember1 = await createAdminGroupMember(prisma, user1, org, group);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group });
 
-      const result = await server.executeOperation(
+      await server.executeOperation(
         {
           query: CREATE_EVACUATION_EVENT,
           variables: {
@@ -139,14 +139,14 @@ describe("evacuation event tests", () => {
     });
     it("non org/group admin should not be able to create an evacuation event", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      const nonAdminOrgMember1 = await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
-      const nonAdminGroupMember1 = await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_MSG = "test event";
       const result = await server.executeOperation(
@@ -171,14 +171,14 @@ describe("evacuation event tests", () => {
     });
     it("shouldnt be able to create evacuation event if one is already in progress", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
-      await createAdminGroupMember(prisma, user1, org, group);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       await prisma.evacuationEvent.create({
@@ -219,9 +219,9 @@ describe("evacuation event tests", () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
       const { user: user3 } = await setupUser(USER3);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
-      await createNonAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
+      await createNonAdminOrgMember({ db: prisma, user: user2, org });
       await prisma.organizationMember.create({
         data: {
           user: {
@@ -245,8 +245,8 @@ describe("evacuation event tests", () => {
         }
       });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       const evacuationEventInProgress = await prisma.evacuationEvent.create({
@@ -298,15 +298,15 @@ describe("evacuation event tests", () => {
     });
     it("group admin should be able to update in-progress evacuation event", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createAdminGroupMember(prisma, user1, org, group);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       const evacuationEventInProgress = await prisma.evacuationEvent.create({
@@ -349,15 +349,15 @@ describe("evacuation event tests", () => {
     });
     it("org admin should be able to update in-progress evacuation event", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       const evacuationEventInProgress = await prisma.evacuationEvent.create({
@@ -403,15 +403,15 @@ describe("evacuation event tests", () => {
     it("shouldnt be able to respond to evacuation event if the event is not in progress", async () => {
       const EVACUATION_RESPONSE = "safe";
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       const evacuationEventEnded = await prisma.evacuationEvent.create({
@@ -449,15 +449,15 @@ describe("evacuation event tests", () => {
     it("non org admin should be able to respond to evacuation event in-progress", async () => {
       const EVACUATION_RESPONSE = "safe";
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       const evacuationEventInProgress = await prisma.evacuationEvent.create({
@@ -500,17 +500,17 @@ describe("evacuation event tests", () => {
     it("non org admin should not be able to retrieve all evacuation events", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
-      await createAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
+      await createAdminOrgMember({ db: prisma, user: user2, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       await prisma.evacuationEvent.create({
@@ -550,17 +550,17 @@ describe("evacuation event tests", () => {
     it("non org/group admin should be able to in progress evacuation events", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
-      await createAdminOrgMember(prisma, user2, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
+      await createAdminOrgMember({ db: prisma, user: user2, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
-      await createNonAdminGroupMember(prisma, user2, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
+      await createNonAdminGroupMember({ db: prisma, user: user2, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       await prisma.evacuationEvent.create({
@@ -606,15 +606,15 @@ describe("evacuation event tests", () => {
     });
     it("group admin should be able to retrieve all evacuation events", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createNonAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createNonAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createAdminGroupMember(prisma, user1, org, group);
+      await createAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       const evacuationEventInProgress = await prisma.evacuationEvent.create({
@@ -675,15 +675,15 @@ describe("evacuation event tests", () => {
     });
     it("org admin should be able to retrieve all evacuation events", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
-      const org = await createOrg(prisma);
-      await createAdminOrgMember(prisma, user1, org);
+      const org = await createOrg({ db: prisma });
+      await createAdminOrgMember({ db: prisma, user: user1, org });
 
       const group = await createGroup({
         db: prisma,
         org
       });
 
-      await createNonAdminGroupMember(prisma, user1, org, group);
+      await createNonAdminGroupMember({ db: prisma, user: user1, org, group });
 
       const EVACUATION_EVENT_START_TIME = new Date().toISOString();
       const evacuationEventInProgress = await prisma.evacuationEvent.create({
@@ -746,7 +746,7 @@ describe("evacuation event tests", () => {
     //   const EVACUATION_RESPONSE_MSG = "safe";
     //   const { user: nonAdminUser, token: nonAdminToken } = await setupUser(USER1);
     //   const { user: adminUser, token: adminToken } = await setupUser(USER2);
-    //   const org = await createOrg(prisma);
+    //   const org = await createOrg({db: prisma});
     //   const nonAdminOrgMember = await createNonAdminOrgMember(prisma, nonAdminUser, org);
     //   const adminOrgMember = await createAdminOrgMember(prisma, adminUser, org);
 
