@@ -12,7 +12,3 @@ hooks:
     - location: scripts/startServer.sh
       timeout: 900
       runas: root
-  # ApplicationStop:
-  #   - location: scripts/stopServer.sh
-  #     timeout: 900
-  #     runas: root
