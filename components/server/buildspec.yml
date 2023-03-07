@@ -11,6 +11,7 @@ phases:
       # - npm run setup-integration-tests
       # - npm run integration-test
       - cd client
+      - npm install
       - npm run build
 artifacts:
   files:
