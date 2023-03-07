@@ -39,7 +39,8 @@
     "build": "tsc",
     "postbuild": "copyfiles package*.json dist",
     "seed-db": "dotenv -e .env.dev npx prisma db seed",
-    "test-query": "dotenv -e .env.dev npx ts-node ./src/test.ts"
+    "test-query": "dotenv -e .env.dev npx ts-node ./src/test.ts",
+    "test": "dotenv -e .env.dev npx ts-node ./src/test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.171.0",

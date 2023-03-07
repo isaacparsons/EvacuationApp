@@ -1,4 +1,4 @@
-import { Group, GroupMember } from "@prisma/client";
+import { Group, GroupMember, User } from "@prisma/client";
 import { AddGroupUser, GroupNotificationSettingInput } from "../generated/graphql";
 import { Context } from "../context";
 export declare const getGroup: (data: {
@@ -6,13 +6,8 @@ export declare const getGroup: (data: {
     groupId: number;
 }) => Promise<Group & {
     members: (GroupMember & {
-        user: import(".prisma/client").User;
+        user: User;
         organizationMember: import(".prisma/client").OrganizationMember;
-    })[];
-    evacuationEvents: (import(".prisma/client").EvacuationEvent & {
-        responses: (import(".prisma/client").EvacuationResponse & {
-            user: import(".prisma/client").User;
-        })[];
     })[];
     notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
 }>;
@@ -21,12 +16,12 @@ export declare const getGroupForUser: (data: {
     groupId: number;
 }) => Promise<Group & {
     members: (GroupMember & {
-        user: import(".prisma/client").User;
+        user: User;
         organizationMember: import(".prisma/client").OrganizationMember;
     })[];
     evacuationEvents: (import(".prisma/client").EvacuationEvent & {
         responses: (import(".prisma/client").EvacuationResponse & {
-            user: import(".prisma/client").User;
+            user: User;
         })[];
     })[];
 }>;
@@ -36,11 +31,24 @@ export declare const getGroupMembers: (data: {
     cursor?: number;
 }) => Promise<{
     data: (GroupMember & {
-        user: import(".prisma/client").User;
+        user: User;
         organizationMember: import(".prisma/client").OrganizationMember;
     })[];
     cursor: number | undefined;
 }>;
+export declare const getGroupWithAcceptedMembers: (data: {
+    context: Context;
+    groupId: number;
+}) => Promise<Group & {
+    members: (GroupMember & {
+        user: User;
+    })[];
+    notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
+}>;
+export declare const getAcceptedUsersByGroupIds: (data: {
+    context: Context;
+    groupIds: number[];
+}) => Promise<User[]>;
 export declare const createGroup: (data: {
     context: Context;
     name: string;

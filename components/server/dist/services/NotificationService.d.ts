@@ -1,25 +1,73 @@
-import { Announcement, EvacuationEvent, OrganizationMember, PrismaClient, User } from "@prisma/client";
+import { Announcement, EvacuationEvent, Group, Organization, OrganizationNotificationSetting, User, GroupNotificationSetting } from "@prisma/client";
 import { Context } from "../context";
-interface SendAlertNotifications {
-    db: PrismaClient;
-    evacuationEvent: EvacuationEvent;
+export declare enum NotificationType {
+    EMAIL = "email",
+    PUSH = "push"
 }
-export declare const getAcceptedGroupMembers: (db: PrismaClient, groupId: number) => Promise<(import(".prisma/client").Group & {
-    members: import(".prisma/client").GroupMember[];
-})[]>;
-export declare const sendAnnouncementNotification: (data: {
-    db: PrismaClient;
-    announcement: Announcement;
-    groupIds?: number[] | null;
-}) => Promise<void>;
-export declare const sendAlertNotification: (data: SendAlertNotifications) => Promise<void>;
-export declare const sendAlertEndedNotification: (data: SendAlertNotifications) => Promise<void>;
-export declare const sendPasswordResetNotification: (user: User) => Promise<void>;
-export declare const sendCompleteSignupNotifications: (data: {
+export interface Notification {
+    type: NotificationType;
+    users: User[];
+    content: NotificationDetails;
+}
+export interface NotificationDetails {
+    subject: string;
+    message: string;
+    appLink?: string;
+    signupLink?: string;
+}
+export declare const sendNotifications: (data: {
     context: Context;
-    organizationId: number;
-    members: Array<OrganizationMember & {
-        user: User;
-    }>;
+    notifications: Notification[];
 }) => Promise<void>;
-export {};
+export declare const createOrganizationNotifications: (data: {
+    users: User[];
+    notificationSettings: OrganizationNotificationSetting;
+    notificationDetails: NotificationDetails;
+}) => Notification[];
+export declare const createGroupNotifications: (data: {
+    users: User[];
+    notificationSettings: GroupNotificationSetting;
+    notificationDetails: NotificationDetails;
+}) => Notification[];
+export declare const createAnnouncementNotification: (data: {
+    announcement: Announcement;
+}) => {
+    subject: string;
+    message: string;
+};
+export declare const createAlertNotification: (data: {
+    evacuationEvent: EvacuationEvent;
+    group: Group;
+}) => {
+    subject: string;
+    message: string;
+    appLink: string;
+};
+export declare const createAlertEndedNotification: (data: {
+    evacuationEvent: EvacuationEvent;
+    group: Group;
+}) => {
+    subject: string;
+    message: string;
+    appLink: string;
+};
+export declare const createPasswordResetNotification: (data: {
+    user: User;
+}) => {
+    subject: string;
+    message: string;
+};
+export declare const createCompleteSignupNotification: (data: {
+    user: User;
+    organization: Organization;
+}) => {
+    subject: string;
+    message: string;
+    signupLink: string;
+};
+export declare const createInvitedToOrgNotification: (data: {
+    organization: Organization;
+}) => {
+    subject: string;
+    message: string;
+};

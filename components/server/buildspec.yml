@@ -10,6 +10,8 @@ phases:
       - npm run unit-tests
       # - npm run setup-integration-tests
       # - npm run integration-test
+      - cd ../client
+      - npm run build
 artifacts:
   files:
     - "**/*"

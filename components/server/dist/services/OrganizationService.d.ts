@@ -19,6 +19,10 @@ export declare const getOrganization: (data: {
     announcements: import(".prisma/client").Announcement[];
     notificationSetting: import(".prisma/client").OrganizationNotificationSetting | null;
 }>;
+export declare const getOrganizationById: (data: {
+    context: Context;
+    organizationId: number;
+}) => Promise<import(".prisma/client").Organization>;
 export declare const getOrganizationMembers: (data: {
     context: Context;
     organizationId: number;
@@ -28,6 +32,15 @@ export declare const getOrganizationMembers: (data: {
         user: User;
     })[];
     cursor: number | null | undefined;
+}>;
+export declare const getOrgWithAcceptedMembers: (data: {
+    context: Context;
+    organizationId: number;
+}) => Promise<import(".prisma/client").Organization & {
+    members: (OrganizationMember & {
+        user: User;
+    })[];
+    notificationSetting: import(".prisma/client").OrganizationNotificationSetting | null;
 }>;
 export declare const getOrganizationForUser: (data: {
     context: Context;
