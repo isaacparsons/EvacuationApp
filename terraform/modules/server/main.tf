@@ -250,7 +250,7 @@ resource "aws_key_pair" "tutorial_kp" {
   public_key = file("${path.module}/tutorial_kp.pub")
 }
 
-data "aws_iam_policy_document" "cloudwatch_agent_iam_policy_document" {
+data "aws_iam_policy_document" "ec2_iam_policy_document" {
   statement {
     actions = [
       "cloudwatch:PutMetricData",
@@ -279,18 +279,27 @@ data "aws_iam_policy_document" "cloudwatch_agent_iam_policy_document" {
     effect = "Allow"
   }
 
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:*",
+      "s3-object-lambda:*"
+    ]
+    resources = ["*"]
+  }
+
 }
 
-resource "aws_iam_policy" "cloudwatch_agent_iam_policy" {
-  name        = "cloudwatchAgentIamPolicy"
-  description = "access to cloudwatch"
+resource "aws_iam_policy" "ec2_iam_policy" {
+  name        = "Ec2IamPolicy"
+  description = "access to cloudwatch, s3"
 
-  policy = data.aws_iam_policy_document.cloudwatch_agent_iam_policy_document.json
+  policy = data.aws_iam_policy_document.ec2_iam_policy_document.json
 }
 
-resource "aws_iam_role" "cloudwatch_agent_iam_role" {
-  name        = "CloudWatchAgentServerRole1"
-  description = "access to cloudwatch"
+resource "aws_iam_role" "ec2_iam_role" {
+  name        = "Ec2ServerRole"
+  description = "access to cloudwatch, s3"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -307,9 +316,9 @@ resource "aws_iam_role" "cloudwatch_agent_iam_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "cloudwatch_agent_iam_role_policy_attachment" {
-  role       = aws_iam_role.cloudwatch_agent_iam_role.name
-  policy_arn = aws_iam_policy.cloudwatch_agent_iam_policy.arn
+resource "aws_iam_role_policy_attachment" "ec2_iam_role_policy_attachment" {
+  role       = aws_iam_role.ec2_iam_role.name
+  policy_arn = aws_iam_policy.ec2_iam_policy.arn
 }
 
 
@@ -319,7 +328,7 @@ data "template_file" "user_data" {
 
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ec2_profile"
-  role = aws_iam_role.cloudwatch_agent_iam_role.name
+  role = aws_iam_role.ec2_iam_role.name
 }
 
 resource "aws_instance" "backend" {

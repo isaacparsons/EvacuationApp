@@ -47,16 +47,24 @@ EOF
 # Start Cloudwatch agent
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
 
-# Clone repo
-git clone https://isaacparsons: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@github.com/isaacparsons/EvacuationApp.git
-
-cd EvacuationApp/components/server
-npm install
+# Install codedeploy agent
+sudo apt-get update
+sudo apt-get install ruby-full -y
+sudo apt-get install wget
+cd /home/ubuntu
+wget https://aws-codedeploy-us-west-2.s3.us-west-2.amazonaws.com/latest/install
+chmod +x ./install
+sudo ./install auto > /tmp/logfile
 
 # Install pm2
 sudo npm install pm2@latest -g
 
+# install aws cli
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
 # Start server
-pm2 start npm --name "app" -- run start 
+#pm2 start npm --name "app" -- run start 
 
 --==BOUNDARY==--

@@ -18,6 +18,7 @@ module "server" {
   source = "./modules/server"
 }
 
-# module "frontend" {
-#   source = "./modules/frontend"
-# }
+module "frontend" {
+  bucket_name = "kiwetinohk-evacuation-app"
+  source      = "./modules/frontend"
+}
