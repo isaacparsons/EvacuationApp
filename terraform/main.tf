@@ -14,11 +14,27 @@ provider "aws" {
 }
 
 
+module "pipeline" {
+  source       = "./modules/pipeline"
+  ec2_tag_name = module.server.ec2_tag_name
+
+
+  deployment_group_name = "TestCodedeployDeploymentGroup"
+  codedeploy_name       = "TestCodedeployApplication"
+
+  codebuild_project_name = "TestCodebuildProject"
+  codepipeline_name      = "TestPipeline"
+
+  repository_id = "isaacparsons/EvacuationApp"
+  branch_name   = "master"
+}
+
 module "server" {
   source = "./modules/server"
 }
 
-module "frontend" {
-  bucket_name = "kiwetinohk-evacuation-app"
-  source      = "./modules/frontend"
-}
+
+# module "frontend" {
+#   bucket_name = "kiwetinohk-evacuation-app"
+#   source      = "./modules/frontend"
+# }
