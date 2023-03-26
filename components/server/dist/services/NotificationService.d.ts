@@ -1,5 +1,7 @@
-import { Announcement, EvacuationEvent, Group, Organization, OrganizationNotificationSetting, User, GroupNotificationSetting } from "@prisma/client";
+import { User } from "@prisma/client";
 import { Context } from "../context";
+import EmailService from "./EmailService";
+import PushNotificationService from "./PushNotificationService";
 export declare enum NotificationType {
     EMAIL = "email",
     PUSH = "push"
@@ -13,61 +15,29 @@ export interface NotificationDetails {
     subject: string;
     message: string;
     appLink?: string;
-    signupLink?: string;
+    emailLink?: string;
 }
 export declare const sendNotifications: (data: {
     context: Context;
-    notifications: Notification[];
+    notifications: INotification[];
 }) => Promise<void>;
-export declare const createOrganizationNotifications: (data: {
-    users: User[];
-    notificationSettings: OrganizationNotificationSetting;
-    notificationDetails: NotificationDetails;
-}) => Notification[];
-export declare const createGroupNotifications: (data: {
-    users: User[];
-    notificationSettings: GroupNotificationSetting;
-    notificationDetails: NotificationDetails;
-}) => Notification[];
-export declare const createAnnouncementNotification: (data: {
-    announcement: Announcement;
-}) => {
-    subject: string;
+export interface INotification {
+    send: () => Promise<void>;
+}
+export declare class EmailNotification implements INotification {
+    emailService: EmailService;
+    userEmails: string[];
     message: string;
-};
-export declare const createAlertNotification: (data: {
-    evacuationEvent: EvacuationEvent;
-    group: Group;
-}) => {
     subject: string;
+    emailLink?: string;
+    constructor(emailService: EmailService, userEmails: string[], message: string, subject: string, emailLink?: string);
+    send(): Promise<void>;
+}
+export declare class PushNotification implements INotification {
+    pushNotificationService: PushNotificationService;
+    userIds: string[];
     message: string;
-    appLink: string;
-};
-export declare const createAlertEndedNotification: (data: {
-    evacuationEvent: EvacuationEvent;
-    group: Group;
-}) => {
-    subject: string;
-    message: string;
-    appLink: string;
-};
-export declare const createPasswordResetNotification: (data: {
-    user: User;
-}) => {
-    subject: string;
-    message: string;
-};
-export declare const createCompleteSignupNotification: (data: {
-    user: User;
-    organization: Organization;
-}) => {
-    subject: string;
-    message: string;
-    signupLink: string;
-};
-export declare const createInvitedToOrgNotification: (data: {
-    organization: Organization;
-}) => {
-    subject: string;
-    message: string;
-};
+    app_url?: string;
+    constructor(pushNotificationService: PushNotificationService, userIds: string[], message: string, app_url?: string);
+    send(): Promise<void>;
+}

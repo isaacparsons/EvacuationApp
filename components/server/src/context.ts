@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { mockDeep, DeepMockProxy } from "jest-mock-extended";
 import logger, { mockLogger } from "./config/logger";
 import TokenService from "./services/TokenService";
+import { AuthenticationError, NotFoundError } from "./util/errors";
 
 const tokenService = new TokenService();
 
@@ -26,21 +27,26 @@ export const createMockContext = (): MockContext => {
 };
 
 export const auth = async ({ req }) => {
-  const log = logger("Kiwitinohk Communications App");
+  let log = logger("Kiwitinohk Communications App");
   const prisma: PrismaClient = new PrismaClient();
   const result: Context = { db: prisma, log };
   if (req?.headers?.authorization) {
     const token = req.headers.authorization.replace("Bearer ", "");
-    const { userId } = tokenService.verify(token);
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
+    try {
+      const { userId } = tokenService.verifyAccessToken(token);
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
 
-    if (!user) {
-      throw new Error("User does not exist for the given access token");
+      if (!user) {
+        throw NotFoundError("User does not exist");
+      }
+      log = logger("Kiwitinohk Communications App", { userId: user.id });
+      result.user = user;
+    } catch (error) {
+      throw AuthenticationError("Invalid access token");
     }
-    result.log = logger("Kiwitinohk Communications App", { userId: user.id });
-    result.user = user;
+    result.log = log;
   }
   return result;
 };

@@ -1,131 +1,160 @@
+import { Resolvers } from "../generated/graphql";
+import { EmailNotification } from "../services/NotificationService";
+import { User } from "@prisma/client";
+import EmailService from "../services/EmailService";
+import PushNotificationService from "../services/PushNotificationService";
+import OrganizationRepository from "../db/organization";
+import GroupRepository from "../db/group";
+
+import { sendNotifications } from "../services/NotificationService";
+import TokenService from "../services/TokenService";
+import { inviteUsersToGroups } from "../services/GroupService";
+import { removeUsersFromOrganization } from "../services/OrganizationService";
 import {
-  createOrganization,
-  createOrganizationAnnouncement,
-  deleteOrganization,
-  deleteOrganizationAnnouncement,
-  getAnnouncements,
-  getOrganization,
-  getOrganizationForUser,
-  getOrganizationMembers,
-  getOrganizationsForUser,
-  inviteToOrganization,
-  removeFromOrganization,
-  updateOrganizationNotificationOptions,
-  updateOrgInvite
+  createOrganizationNotifications,
+  inviteUsersToOrganization
 } from "../services/OrganizationService";
 
-import { Resolvers } from "../generated/graphql";
-import { addUsersToGroups, getAcceptedUsersByGroupIds } from "../services/GroupService";
-import { RequestError } from "../util/errors";
-import { createAnnouncementNotification, NotificationType } from "../services/NotificationService";
-import { getOrgWithAcceptedMembers } from "../services/OrganizationService";
-import { User } from "@prisma/client";
-import { getOrganizationById } from "../services/OrganizationService";
-import {
-  createCompleteSignupNotification,
-  createInvitedToOrgNotification
-} from "../services/NotificationService";
-import {
-  sendNotifications,
-  createOrganizationNotifications
-} from "../services/NotificationService";
+const tokenService = new TokenService();
+const emailService = new EmailService();
+const pushNotificationService = new PushNotificationService();
 
 const OrganizationResolver: Resolvers = {
   Query: {
     getOrganizations: async (parent, args, context) => {
-      const organizations = await getOrganizationsForUser({
-        context
+      const organizationRepository = new OrganizationRepository(context.db);
+      const organizations = organizationRepository.getOrganizationsForUser({
+        userId: context.user!.id
       });
       return organizations;
     },
     getOrganization: async (parent, args, context) => {
-      return getOrganization({
-        context,
-        ...args
+      const { organizationId } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const organization = await organizationRepository.getOrganization({
+        organizationId
       });
+      if (!organization) {
+        throw new Error(`Organization does not exist with id: ${organizationId}`);
+      }
+      return organization;
     },
     getOrganizationForUser: async (parent, args, context) => {
-      return getOrganizationForUser({
-        context,
-        ...args
+      const { organizationId } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const groupRepository = new GroupRepository(context.db);
+      const organization = await organizationRepository.getOrganizationForUser({
+        organizationId,
+        userId: context.user!.id
       });
+
+      if (!organization) {
+        throw new Error(`Organization with id: ${organizationId} does not exist`);
+      }
+      const groups = await groupRepository.getGroupsForUserInOrganization({
+        userId: context.user!.id,
+        organizationId
+      });
+
+      return { ...organization, groups };
     },
     getOrganizationMembers: async (parent, args, context) => {
-      return getOrganizationMembers({
-        context,
-        ...args
+      const { organizationId, cursor } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const members = await organizationRepository.getOrganizationMembers({
+        organizationId,
+        cursor
       });
+      return members;
     },
     getAnnouncements: async (parent, args, context) => {
-      return getAnnouncements({
-        context,
-        ...args
+      const { organizationId, cursor } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const announcements = organizationRepository.getAnnouncements({
+        organizationId,
+        cursor
       });
+      return announcements;
     }
   },
   Mutation: {
     createOrganization: async (parent, args, context) => {
-      const organization = await createOrganization({
-        context,
-        ...args
+      const { name, organizationNotificationSetting } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const organization = await organizationRepository.createOrganization({
+        name,
+        organizationNotificationSetting,
+        userId: context.user!.id
       });
       return organization;
     },
     deleteOrganization: async (parent, args, context) => {
-      const organization = await deleteOrganization({
-        context,
-        ...args
+      const { organizationId } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const organization = await organizationRepository.deleteOrganization({
+        organizationId
       });
       return organization;
     },
     updateOrganizationNotificationOptions: async (parent, args, context) => {
-      const organization = await updateOrganizationNotificationOptions({
-        context,
-        ...args
+      const { organizationId, organizationNotificationSetting } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const organization = await organizationRepository.updateOrganizationNotificationOptions({
+        organizationId,
+        organizationNotificationSetting
       });
       return organization;
     },
     inviteToOrganization: async (parent, args, context) => {
-      const { groupIds, organizationId } = args;
-      const { succeeded, failed } = await inviteToOrganization({
-        context,
-        ...args
+      const { users, organizationId, groupIds } = args;
+
+      const organizationRepository = new OrganizationRepository(context.db);
+      const groupRepository = new GroupRepository(context.db);
+
+      const { succeeded, failed } = await inviteUsersToOrganization({
+        organizationRepository,
+        users,
+        organizationId,
+        context
       });
-      const users = succeeded.map((member) => member.user);
+
+      const succeededUsers = succeeded.map((member) => member.user);
       if (groupIds && groupIds.length > 0) {
-        const userIds = users.map((user) => user.id);
-        await addUsersToGroups({
-          context,
-          organizationId: organizationId,
+        const userIds = succeededUsers.map((user) => user.id);
+        await inviteUsersToGroups({
+          groupRepository,
+          organizationId,
+          groupIds,
           userIds,
-          groupIds: groupIds
+          context
         });
       }
-      const organization = await getOrganizationById({ context, organizationId });
-      const notSignedUpUsers = users.filter((user) => !user.accountCreated);
-      const signedUpUsers = users.filter((user) => user.accountCreated);
+      const organization = await organizationRepository.getOrganizationById({ organizationId });
+      if (!organization) {
+        throw new Error(`Organization does not exist with id: ${organizationId}`);
+      }
+      const notSignedUpUsers = succeededUsers.filter((user) => !user.accountCreated);
+      const signedUpUsers = succeededUsers.filter((user) => user.accountCreated);
 
       const completeSignupNotifications = notSignedUpUsers.map((user) => {
-        const notificationDetails = createCompleteSignupNotification({
-          user,
-          organization
-        });
-        return {
-          type: NotificationType.EMAIL,
-          users: [user],
-          content: notificationDetails
-        };
+        const token = tokenService.create(user);
+        return new EmailNotification(
+          emailService,
+          [user.email],
+          `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n`,
+          "Complete Signup",
+          `http://${process.env.CLIENT_URL}/completeSignup?token=${token}`
+        );
       });
 
       const invitedToOrgNotifications = signedUpUsers.map((user) => {
-        const notificationDetails = createInvitedToOrgNotification({
-          organization
-        });
-        return {
-          type: NotificationType.EMAIL,
-          users: [user],
-          content: notificationDetails
-        };
+        const emailNotification = new EmailNotification(
+          emailService,
+          [user.email],
+          `You have been invited to the organization: ${organization.name}. Open the app to respond to invitation: \n`,
+          `Invitation to ${organization.name}`
+        );
+        return emailNotification;
       });
 
       const notifications = [...completeSignupNotifications, ...invitedToOrgNotifications];
@@ -135,44 +164,68 @@ const OrganizationResolver: Resolvers = {
         notifications
       });
       if (failed.length > 0) {
-        throw new RequestError("failed to invite 1 or more users");
+        throw new Error("failed to invite 1 or more users");
       }
       return succeeded;
     },
     updateOrgInvite: async (parent, args, context) => {
-      const organizationMember = await updateOrgInvite({
-        context,
-        ...args
+      const { organizationId, status } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const organizationMember = await organizationRepository.updateOrgInvite({
+        userId: context.user!.id,
+        status,
+        organizationId
       });
+      if (!organizationMember) {
+        throw new Error("Not a valid invitation response");
+      }
       return organizationMember;
     },
     removeFromOrganization: async (parent, args, context) => {
-      const { succeeded, failed } = await removeFromOrganization({
-        context,
-        ...args
+      const { userIds, organizationId } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const { succeeded, failed } = await removeUsersFromOrganization({
+        organizationRepository,
+        userIds,
+        organizationId,
+        context
       });
       if (failed.length > 0) {
-        throw new RequestError("Failed to remove 1 or more members");
+        throw new Error("Failed to remove 1 or more members");
       }
       return succeeded;
     },
     createOrganizationAnnouncement: async (parent, args, context) => {
-      const { groupIds } = args;
-      const announcement = await createOrganizationAnnouncement({
-        context,
-        ...args
+      const { title, description, organizationId, groupIds } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const groupRepository = new GroupRepository(context.db);
+      const announcement = await organizationRepository.createOrganizationAnnouncement({
+        organizationId,
+        title,
+        description,
+        userId: context.user!.id
       });
-      const organization = await getOrgWithAcceptedMembers({
-        context,
-        organizationId: announcement.organizationId
+      const organization = await organizationRepository.getOrgWithAcceptedMembers({
+        organizationId
       });
+      if (!organization) {
+        throw new Error(`No organization exists with id: ${organizationId}`);
+      }
       let users: User[] = organization.members.map((member) => member.user);
-      const notificationDetails = createAnnouncementNotification({ announcement });
+      const notificationDetails = {
+        subject: `Announcement - ${announcement.title}`,
+        message: announcement.description || ""
+      };
+
       if (groupIds && groupIds.length > 0) {
-        users = await getAcceptedUsersByGroupIds({ context, groupIds });
+        users = await groupRepository.getAcceptedUsersByGroupIds({
+          groupIds
+        });
       }
       if (organization.notificationSetting) {
         const notifications = createOrganizationNotifications({
+          emailService,
+          pushNotificationService,
           users,
           notificationSettings: organization.notificationSetting,
           notificationDetails
@@ -185,11 +238,12 @@ const OrganizationResolver: Resolvers = {
       return announcement;
     },
     deleteOrganizationAnnouncement: async (parent, args, context) => {
-      const organization = await deleteOrganizationAnnouncement({
-        context,
-        ...args
+      const { announcementId } = args;
+      const organizationRepository = new OrganizationRepository(context.db);
+      const annnouncement = await organizationRepository.deleteOrganizationAnnouncement({
+        announcementId
       });
-      return organization;
+      return annnouncement;
     }
   }
 };

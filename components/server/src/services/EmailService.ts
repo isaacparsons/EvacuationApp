@@ -1,6 +1,4 @@
-import { User } from "@prisma/client";
 import nodemailer from "nodemailer";
-import TokenService from "./TokenService";
 import Mailhog from "../dev/Mailhog";
 
 const transportOptions = () => {
@@ -20,22 +18,32 @@ const transportOptions = () => {
   };
 };
 
+export interface EmailDetails {
+  users: string[];
+  subject: string;
+  message: string;
+  link?: string;
+}
+
 export default class EmailService {
   public transporter: any;
-  public tokenService: TokenService;
   constructor() {
-    this.tokenService = new TokenService();
     const options = transportOptions();
     this.transporter = nodemailer.createTransport(options);
   }
 
-  public sendEmail = async (users: User[], subject: string, message: string, link?: string) => {
+  public sendEmail = async (
+    userEmails: string[],
+    subject: string,
+    message: string,
+    link?: string
+  ) => {
     try {
-      const emailList = users.reduce((list, user, i) => {
+      const emailList = userEmails.reduce((list, email, i) => {
         if (i === 0) {
-          return `${user.email}`;
+          return `${email}`;
         }
-        return `${list},${user.email}`;
+        return `${list},${email}`;
       }, "");
       const options: any = {
         from: process.env.EMAIL,
@@ -43,7 +51,7 @@ export default class EmailService {
         subject
       };
       if (link) {
-        options.html = `<p>${message}<a href="${link}">Sign up</a></p>`;
+        options.html = `<p>${message}<a href="${link}">Link</a></p>`;
       } else {
         options.text = message;
       }

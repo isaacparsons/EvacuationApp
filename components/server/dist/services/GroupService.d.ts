@@ -1,93 +1,39 @@
-import { Group, GroupMember, User } from "@prisma/client";
-import { AddGroupUser, GroupNotificationSettingInput } from "../generated/graphql";
+import { User, GroupNotificationSetting, GroupMember } from "@prisma/client";
+import EmailService from "./EmailService";
+import PushNotificationService from "./PushNotificationService";
+import { INotification, NotificationDetails } from "../services/NotificationService";
+import GroupRepository from "../db/group";
 import { Context } from "../context";
-export declare const getGroup: (data: {
-    context: Context;
-    groupId: number;
-}) => Promise<Group & {
-    members: (GroupMember & {
-        user: User;
-        organizationMember: import(".prisma/client").OrganizationMember;
-    })[];
-    notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
-}>;
-export declare const getGroupForUser: (data: {
-    context: Context;
-    groupId: number;
-}) => Promise<Group & {
-    members: (GroupMember & {
-        user: User;
-        organizationMember: import(".prisma/client").OrganizationMember;
-    })[];
-    evacuationEvents: (import(".prisma/client").EvacuationEvent & {
-        responses: (import(".prisma/client").EvacuationResponse & {
-            user: User;
-        })[];
-    })[];
-}>;
-export declare const getGroupMembers: (data: {
-    context: Context;
-    groupId: number;
-    cursor?: number;
-}) => Promise<{
-    data: (GroupMember & {
-        user: User;
-        organizationMember: import(".prisma/client").OrganizationMember;
-    })[];
-    cursor: number | undefined;
-}>;
-export declare const getGroupWithAcceptedMembers: (data: {
-    context: Context;
-    groupId: number;
-}) => Promise<Group & {
-    members: (GroupMember & {
-        user: User;
-    })[];
-    notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
-}>;
-export declare const getAcceptedUsersByGroupIds: (data: {
-    context: Context;
-    groupIds: number[];
-}) => Promise<User[]>;
-export declare const createGroup: (data: {
-    context: Context;
-    name: string;
-    organizationId: number;
-    groupNotificationSetting: GroupNotificationSettingInput;
-}) => Promise<Group & {
-    members: GroupMember[];
-    notificationSetting: import(".prisma/client").GroupNotificationSetting | null;
-}>;
-export declare const deleteGroup: (data: {
-    context: Context;
-    groupId: number;
-}) => Promise<Group>;
-export declare const updateGroupNotificationOptions: (data: {
-    context: Context;
-    groupId: number;
-    groupNotificationSetting: GroupNotificationSettingInput;
-}) => Promise<import(".prisma/client").GroupNotificationSetting>;
-export declare const addUsersToGroups: (data: {
-    context: Context;
-    organizationId: number;
-    userIds: number[];
-    groupIds: number[];
-}) => Promise<void>;
+import { AddGroupUser } from "../generated/graphql";
+export declare const createGroupNotifications: (data: {
+    emailService: EmailService;
+    pushNotificationService: PushNotificationService;
+    users: User[];
+    notificationSettings: GroupNotificationSetting;
+    notificationDetails: NotificationDetails;
+}) => INotification[];
 export declare const addUsersToGroup: (data: {
-    context: Context;
-    groupId: number;
+    groupRepository: GroupRepository;
     users: AddGroupUser[];
-}) => Promise<GroupMember[]>;
-export declare const updateGroupMember: (data: {
-    context: Context;
     groupId: number;
-    userId: number;
-    admin: boolean;
-}) => Promise<GroupMember>;
-export declare const removeMembers: (data: {
+    organizationId: number;
     context: Context;
+}) => Promise<{
+    succeeded: GroupMember[];
+    failed: number[];
+}>;
+export declare const inviteUsersToGroups: (data: {
+    groupRepository: GroupRepository;
+    organizationId: number;
+    groupIds: number[];
     userIds: number[];
+    context: Context;
+}) => Promise<void>;
+export declare const removeUsersFromGroup: (data: {
+    groupRepository: GroupRepository;
     groupId: number;
+    userIds: number[];
+    context: Context;
 }) => Promise<{
     succeeded: GroupMember[];
     failed: number[];

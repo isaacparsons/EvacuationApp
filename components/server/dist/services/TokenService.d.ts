@@ -4,4 +4,12 @@ export default class TokenService {
     verify: (token: string) => {
         userId: number;
     };
+    createAccessToken: (userId: number) => string;
+    createRefreshToken: (userId: number) => string;
+    verifyAccessToken: (token: string) => {
+        userId: number;
+    };
+    verifyRefreshToken: (token: string) => {
+        userId: number;
+    };
 }

@@ -13,8 +13,9 @@ type Query {
   getJoinedEntities: User
 }
 type Mutation {
-  resetPassword(email: String!): User!
+  resetPassword(email: String!): String!
   login(email: String!, password: String!): Auth!
+  token(refreshToken: String!): Auth!
   signup(
     email: String!
     phoneNumber: String!
@@ -67,6 +68,7 @@ type Mutation {
 
 type Auth {
   token: String!
+  refreshToken: String!
   user: User!
 }
 

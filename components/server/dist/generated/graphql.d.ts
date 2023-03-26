@@ -40,6 +40,7 @@ export type Announcement = {
 };
 export type Auth = {
     __typename?: 'Auth';
+    refreshToken: Scalars['String'];
     token: Scalars['String'];
     user: User;
 };
@@ -141,8 +142,9 @@ export type Mutation = {
     login: Auth;
     removeFromOrganization?: Maybe<Array<OrganizationMember>>;
     removeMembers: Array<GroupMember>;
-    resetPassword: User;
+    resetPassword: Scalars['String'];
     signup: Auth;
+    token: Auth;
     updateEvacuationEvent: EvacuationEvent;
     updateGroupMember: GroupMember;
     updateGroupNotificationOptions: GroupNotificationSetting;
@@ -212,6 +214,9 @@ export type MutationSignupArgs = {
     lastName: Scalars['String'];
     password: Scalars['String'];
     phoneNumber: Scalars['String'];
+};
+export type MutationTokenArgs = {
+    refreshToken: Scalars['String'];
 };
 export type MutationUpdateEvacuationEventArgs = {
     evacuationId: Scalars['Int'];
@@ -353,10 +358,7 @@ export type UserOrganization = {
     notificationSetting?: Maybe<OrganizationNotificationSetting>;
 };
 export type ResolverTypeWrapper<T> = Promise<T> | T;
-export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
-    resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
-};
-export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> = ResolverFn<TResult, TParent, TContext, TArgs> | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
+export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> = ResolverFn<TResult, TParent, TContext, TArgs>;
 export type ResolverFn<TResult, TParent, TContext, TArgs> = (parent: TParent, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult> | TResult;
 export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (parent: TParent, args: TArgs, context: TContext, info: GraphQLResolveInfo) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
 export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (parent: TParent, args: TArgs, context: TContext, info: GraphQLResolveInfo) => TResult | Promise<TResult>;
@@ -449,6 +451,7 @@ export type AnnouncementResolvers<ContextType = Context, ParentType extends Reso
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 export type AuthResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Auth'] = ResolversParentTypes['Auth']> = {
+    refreshToken?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
     token?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
     user?: Resolver<ResolversTypes['User'], ParentType, ContextType>;
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
@@ -536,8 +539,9 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
     login?: Resolver<ResolversTypes['Auth'], ParentType, ContextType, RequireFields<MutationLoginArgs, 'email' | 'password'>>;
     removeFromOrganization?: Resolver<Maybe<Array<ResolversTypes['OrganizationMember']>>, ParentType, ContextType, RequireFields<MutationRemoveFromOrganizationArgs, 'organizationId' | 'userIds'>>;
     removeMembers?: Resolver<Array<ResolversTypes['GroupMember']>, ParentType, ContextType, RequireFields<MutationRemoveMembersArgs, 'groupId' | 'userIds'>>;
-    resetPassword?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationResetPasswordArgs, 'email'>>;
+    resetPassword?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationResetPasswordArgs, 'email'>>;
     signup?: Resolver<ResolversTypes['Auth'], ParentType, ContextType, RequireFields<MutationSignupArgs, 'email' | 'firstName' | 'lastName' | 'password' | 'phoneNumber'>>;
+    token?: Resolver<ResolversTypes['Auth'], ParentType, ContextType, RequireFields<MutationTokenArgs, 'refreshToken'>>;
     updateEvacuationEvent?: Resolver<ResolversTypes['EvacuationEvent'], ParentType, ContextType, RequireFields<MutationUpdateEvacuationEventArgs, 'evacuationId' | 'status'>>;
     updateGroupMember?: Resolver<ResolversTypes['GroupMember'], ParentType, ContextType, RequireFields<MutationUpdateGroupMemberArgs, 'admin' | 'groupId' | 'userId'>>;
     updateGroupNotificationOptions?: Resolver<ResolversTypes['GroupNotificationSetting'], ParentType, ContextType, RequireFields<MutationUpdateGroupNotificationOptionsArgs, 'groupId' | 'groupNotificationSetting'>>;

@@ -1,7 +1,5 @@
 import * as OneSignal from "@onesignal/node-onesignal";
 
-import { User } from "@prisma/client";
-
 export default class PushNotificationService {
   public client: OneSignal.DefaultApi;
 
@@ -20,11 +18,10 @@ export default class PushNotificationService {
     this.client = new OneSignal.DefaultApi(configuration);
   }
 
-  public async sendNotifications(users: User[], message: string, app_url?: string) {
-    const listOfIds = users.map((user) => user.id.toString());
+  public async sendNotifications(usersIds: string[], message: string, app_url?: string) {
     const notification = {
       app_id: process.env.ONESIGNAL_APP_ID as string,
-      include_external_user_ids: listOfIds,
+      include_external_user_ids: usersIds,
       contents: {
         en: message
       },
@@ -32,7 +29,8 @@ export default class PushNotificationService {
     };
 
     try {
-      return await this.client.createNotification(notification);
+      await this.client.createNotification(notification);
+      return;
     } catch (e) {
       console.log(e);
     }

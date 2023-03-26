@@ -1,8 +1,11 @@
-import { User } from "@prisma/client";
-import TokenService from "./TokenService";
+export interface EmailDetails {
+    users: string[];
+    subject: string;
+    message: string;
+    link?: string;
+}
 export default class EmailService {
     transporter: any;
-    tokenService: TokenService;
     constructor();
-    sendEmail: (users: User[], subject: string, message: string, link?: string) => Promise<void>;
+    sendEmail: (userEmails: string[], subject: string, message: string, link?: string) => Promise<void>;
 }

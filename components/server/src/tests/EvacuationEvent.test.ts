@@ -444,7 +444,7 @@ describe("evacuation event tests", () => {
       });
       expect(evacuationResponseInDb).toBeNull();
       expect(result.errors?.length).toEqual(1);
-      expect(result.errors?.[0]?.message).toEqual("Evacuation Event is no longer in progress");
+      expect(result.errors?.[0]?.message).toEqual("Event has already ended");
     });
     it("non org admin should be able to respond to evacuation event in-progress", async () => {
       const EVACUATION_RESPONSE = "safe";

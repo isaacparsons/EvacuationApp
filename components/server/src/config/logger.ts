@@ -11,7 +11,7 @@ export const mockLogger = {
 };
 
 const logger = (name: string, options?: any) => {
-  if (process.env.NODE_ENV) {
+  if (process.env.NODE_ENV === "test") {
     return mockLogger;
   }
   const logPath = path.join(__dirname, "../../logs/logs.log");

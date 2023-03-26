@@ -17,14 +17,7 @@ export const LOGIN = gql`
 `;
 export const RESET_PASSWORD = gql`
   mutation ResetPassword($email: String!) {
-    resetPassword(email: $email) {
-      accountCreated
-      email
-      phoneNumber
-      firstName
-      lastName
-      id
-    }
+    resetPassword(email: $email)
   }
 `;
 

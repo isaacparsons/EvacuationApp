@@ -45,7 +45,7 @@ describe("user tests", () => {
       });
       expect(result.errors?.length).toEqual(1);
       expect(result.errors?.[0]?.message).toEqual(
-        "An account with this phone number already exists"
+        "An account with this email/phone number already exists"
       );
     });
     it("should be able to sign up if account exists and account created == false", async () => {
@@ -245,14 +245,14 @@ describe("user tests", () => {
       expect(result.errors?.[0]?.message).toEqual(`No user found for email: ${USER1.email}`);
     });
     it("should be able to reset password if account exists and account created == true", async () => {
-      const { user } = await setupUser(USER1);
+      await setupUser(USER1);
       const result = await server.executeOperation({
         query: RESET_PASSWORD,
         variables: {
           email: USER1.email
         }
       });
-      expect(result?.data?.resetPassword).toEqual({ ...user, passwordHash: undefined });
+      expect(result?.data?.resetPassword).toEqual(USER1.email);
 
       const emails = await mailhog.getEmails();
 
