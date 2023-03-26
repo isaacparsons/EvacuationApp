@@ -70,7 +70,7 @@
   "devDependencies": {
     "@commitlint/cli": "^8.1.0",
     "@commitlint/config-conventional": "^8.1.0",
-    "@graphql-codegen/add": "^1.7.0",
+    "@graphql-codegen/add": "^4.0.1",
     "@graphql-codegen/cli": "3.0.0",
     "@graphql-codegen/introspection": "3.0.0",
     "@graphql-codegen/typescript": "3.0.0",
