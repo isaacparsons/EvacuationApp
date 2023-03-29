@@ -143,7 +143,7 @@ const OrganizationResolver: Resolvers = {
           [user.email],
           `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n`,
           "Complete Signup",
-          `http://${process.env.CLIENT_URL}/completeSignup?token=${token}`
+          `${process.env.CLIENT_URL}/completeSignup?token=${token}`
         );
       });
 

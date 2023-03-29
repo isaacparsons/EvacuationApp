@@ -15,12 +15,36 @@ export const USER2 = {
   accountCreated: true,
   password: "123"
 };
-
 export const USER3 = {
   firstName: "test",
   lastName: "3",
   email: "test3@email.com",
   phoneNumber: "4031234569",
+  accountCreated: true,
+  password: "123"
+};
+export const USER4 = {
+  firstName: "test",
+  lastName: "4",
+  email: "test4@email.com",
+  phoneNumber: "4031234560",
+  accountCreated: true,
+  password: "123"
+};
+export const USER5 = {
+  firstName: "test",
+  lastName: "5",
+  email: "test5@email.com",
+  phoneNumber: "4031234571",
+  accountCreated: true,
+  password: "123"
+};
+
+export const USER6 = {
+  firstName: "test",
+  lastName: "6",
+  email: "test6@email.com",
+  phoneNumber: "4031234572",
   accountCreated: true,
   password: "123"
 };

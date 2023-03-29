@@ -18,7 +18,7 @@ export default class EvacuationEventRepository {
       }),
       take: 5,
       orderBy: {
-        id: "asc"
+        id: "desc"
       },
       where: {
         groupId

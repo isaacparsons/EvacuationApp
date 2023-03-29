@@ -31,7 +31,7 @@ describe("evacuation event tests", () => {
     await mailhog.deleteAllEmails();
   });
   describe("create evacuation events", () => {
-    it("org admin should be able to create an evacuation event, and should send notifications to joined users", async () => {
+    it("org admin should be able to create an evacuation event, and should send notifications to accepted users", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
       const { user: user3 } = await setupUser(USER3);
@@ -215,7 +215,7 @@ describe("evacuation event tests", () => {
     });
   });
   describe("updating evacuation events", () => {
-    it("ending an evacuation event should send notifications to joined users", async () => {
+    it("ending an evacuation event should send notifications to accepted users", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
       const { user: user3 } = await setupUser(USER3);
@@ -497,7 +497,7 @@ describe("evacuation event tests", () => {
     });
   });
   describe("get evacuation events", () => {
-    it("non org admin should not be able to retrieve all evacuation events", async () => {
+    it("non org/group admin should not be able to retrieve all evacuation events", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
       const org = await createOrg({ db: prisma });
@@ -547,7 +547,7 @@ describe("evacuation event tests", () => {
       expect(result.errors?.length).toEqual(1);
       expect(result.errors?.[0]?.message).toEqual("Not Authorised!");
     });
-    it("non org/group admin should be able to in progress evacuation events", async () => {
+    it("non org/group admin should be able to retrieve in progress evacuation events", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
       const org = await createOrg({ db: prisma });

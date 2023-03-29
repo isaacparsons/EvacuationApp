@@ -97,6 +97,7 @@ describe("group tests", () => {
       expect(result.errors?.[0]?.message).toEqual("Not Authorised!");
     });
   });
+  // describe("delete group", () => {})
   describe("Add users to group", () => {
     it("org admin should be able to add users to a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
@@ -136,6 +137,7 @@ describe("group tests", () => {
         admin: false
       });
     });
+    // it("adding a user that has already been added should not throw an error", async () => {})
     it("group admin should be able to add users to a group", async () => {
       const { user: user1, token: token1 } = await setupUser(USER1);
       const { user: user2 } = await setupUser(USER2);
@@ -480,4 +482,6 @@ describe("group tests", () => {
       ]);
     });
   });
+
+  // describe("get group members", () => {})
 });

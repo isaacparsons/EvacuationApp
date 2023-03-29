@@ -1,7 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import TokenService from "../services/TokenService";
-import { User, Group, Organization, GroupNotificationSettingInput } from "../generated/graphql";
+import {
+  User,
+  Group,
+  Organization,
+  GroupNotificationSettingInput,
+  OrganizationNotificationSettingInput
+} from "../generated/graphql";
 import { GROUP, GROUP_NOTIFICATION_SETTING, ORG, ORG_NOTIFICATION_SETTINGS } from "./testData";
 
 const prisma = new PrismaClient();
@@ -42,12 +48,18 @@ export const setupUser = async (data: {
   return { user, token };
 };
 
-export const createOrg = async ({ db }: { db: PrismaClient }) => {
+export const createOrg = async ({
+  db,
+  notificationSettings
+}: {
+  db: PrismaClient;
+  notificationSettings?: OrganizationNotificationSettingInput;
+}) => {
   return await db.organization.create({
     data: {
       ...ORG,
       notificationSetting: {
-        create: ORG_NOTIFICATION_SETTINGS
+        create: notificationSettings ?? ORG_NOTIFICATION_SETTINGS
       }
     }
   });
@@ -56,11 +68,13 @@ export const createOrg = async ({ db }: { db: PrismaClient }) => {
 export const createAdminOrgMember = async ({
   db,
   user,
-  org
+  org,
+  status
 }: {
   db: PrismaClient;
   user: User;
   org: Organization;
+  status?: string;
 }) => {
   return await db.organizationMember.create({
     data: {
@@ -70,7 +84,7 @@ export const createAdminOrgMember = async ({
       organization: {
         connect: { id: org.id }
       },
-      status: "accepted",
+      status: status ?? "accepted",
       admin: true
     }
   });
@@ -79,11 +93,13 @@ export const createAdminOrgMember = async ({
 export const createNonAdminOrgMember = async ({
   db,
   user,
-  org
+  org,
+  status
 }: {
   db: PrismaClient;
   user: User;
   org: Organization;
+  status?: string;
 }) => {
   return await db.organizationMember.create({
     data: {
@@ -93,7 +109,7 @@ export const createNonAdminOrgMember = async ({
       organization: {
         connect: { id: org.id }
       },
-      status: "accepted",
+      status: status ?? "accepted",
       admin: false
     }
   });

@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { User, Group, Organization, GroupNotificationSettingInput } from "../generated/graphql";
+import { User, Group, Organization, GroupNotificationSettingInput, OrganizationNotificationSettingInput } from "../generated/graphql";
 export declare const deleteDb: () => Promise<void>;
 export declare const setupUser: (data: {
     email: string;
@@ -12,18 +12,21 @@ export declare const setupUser: (data: {
     user: import(".prisma/client").User;
     token: string;
 }>;
-export declare const createOrg: ({ db }: {
+export declare const createOrg: ({ db, notificationSettings }: {
     db: PrismaClient;
+    notificationSettings?: OrganizationNotificationSettingInput | undefined;
 }) => Promise<import(".prisma/client").Organization>;
-export declare const createAdminOrgMember: ({ db, user, org }: {
+export declare const createAdminOrgMember: ({ db, user, org, status }: {
     db: PrismaClient;
     user: User;
     org: Organization;
+    status?: string | undefined;
 }) => Promise<import(".prisma/client").OrganizationMember>;
-export declare const createNonAdminOrgMember: ({ db, user, org }: {
+export declare const createNonAdminOrgMember: ({ db, user, org, status }: {
     db: PrismaClient;
     user: User;
     org: Organization;
+    status?: string | undefined;
 }) => Promise<import(".prisma/client").OrganizationMember>;
 export declare const createGroup: ({ db, org, groupName, notificationSettings }: {
     db: PrismaClient;
