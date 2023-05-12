@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${var.bucket_name}"
+  bucket = var.bucket_name
 }
 
 resource "aws_s3_bucket_website_configuration" "website_config" {
@@ -14,14 +14,10 @@ resource "aws_s3_bucket_website_configuration" "website_config" {
   }
 }
 
-resource "aws_s3_bucket_acl" "acl" {
-  bucket = aws_s3_bucket.frontend.id
-  acl    = "public-read"
-}
-
 resource "aws_s3_bucket_policy" "policy" {
-  bucket = aws_s3_bucket.frontend.id
-  policy = <<EOF
+  bucket     = aws_s3_bucket.frontend.id
+  depends_on = [aws_s3_bucket_acl.krc_bucket_acl]
+  policy     = <<EOF
 {
   "Id": "bucket_policy_site",
   "Version": "2012-10-17",
@@ -38,4 +34,30 @@ resource "aws_s3_bucket_policy" "policy" {
   ]
 }
 EOF
+}
+
+resource "aws_s3_bucket_public_access_block" "krc_public_access_block" {
+  bucket = aws_s3_bucket.frontend.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_ownership_controls" "krc_bucket_ownership_controls" {
+  bucket = aws_s3_bucket.frontend.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "krc_bucket_acl" {
+  depends_on = [
+    aws_s3_bucket_public_access_block.krc_public_access_block,
+    aws_s3_bucket_ownership_controls.krc_bucket_ownership_controls,
+  ]
+
+  bucket = aws_s3_bucket.frontend.id
+  acl    = "public-read"
 }

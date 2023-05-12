@@ -19,11 +19,11 @@ module "pipeline" {
   ec2_tag_name = module.server.ec2_tag_name
 
 
-  deployment_group_name = "TestCodedeployDeploymentGroup"
-  codedeploy_name       = "TestCodedeployApplication"
+  deployment_group_name = "KRCCodedeployDeploymentGroup"
+  codedeploy_name       = "KRCCodedeployApplication"
 
-  codebuild_project_name = "TestCodebuildProject"
-  codepipeline_name      = "TestPipeline"
+  codebuild_project_name = "KRCCodebuildProject"
+  codepipeline_name      = "KRCPipeline"
 
   repository_id = "isaacparsons/EvacuationApp"
   branch_name   = "master"
