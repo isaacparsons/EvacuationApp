@@ -4,7 +4,7 @@ import { email } from 'config';
 const PrivacyPolicy = () => {
   return (
     <Box
-      height="100vh"
+      minHeight="100vh"
       display="flex"
       flexDirection={'column'}
       justifyContent="center"
