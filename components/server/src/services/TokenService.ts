@@ -13,6 +13,7 @@ export default class TokenService {
 
   public createAccessToken = (userId: number) => {
     return jwt.sign({ userId }, process.env.JWT_SECRET as string, { expiresIn: "30m" });
+    // return jwt.sign({ userId }, process.env.JWT_SECRET as string, { expiresIn: "1m" });
   };
   public createRefreshToken = (userId: number) => {
     return jwt.sign({ userId }, process.env.JWT_SECRET_REFRESH as string, { expiresIn: "14d" });

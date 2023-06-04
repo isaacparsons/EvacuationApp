@@ -111,6 +111,32 @@ export default class OrganizationRepository {
     return organizationMember;
   };
 
+  getOrganizationMemberByEmail = async (data: { email: string; organizationId: number }) => {
+    const { organizationId, email } = data;
+    const user = await this.db.user.findUnique({
+      where: {
+        email: email.toLowerCase()
+      }
+    });
+    if (!user) {
+      return null;
+    }
+
+    const organizationMember = this.db.organizationMember.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: user.id,
+          organizationId: organizationId
+        }
+      },
+      include: {
+        user: true
+      }
+    });
+
+    return organizationMember;
+  };
+
   getOrgWithAcceptedMembers = async (data: { organizationId: number }) => {
     const { organizationId } = data;
     const organization = await this.db.organization.findUnique({

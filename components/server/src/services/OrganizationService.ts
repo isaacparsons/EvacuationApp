@@ -59,12 +59,17 @@ export const inviteUsersToOrganization = async (data: {
   await Promise.all(
     users.map(async (user) => {
       try {
-        const member = await organizationRepository.createOrganizationMember({
-          organizationId,
-          admin: user.admin,
-          email: user.email
+        let member = await organizationRepository.getOrganizationMemberByEmail({
+          email: user.email,
+          organizationId
         });
-
+        if (!member) {
+          member = await organizationRepository.createOrganizationMember({
+            organizationId,
+            admin: user.admin,
+            email: user.email
+          });
+        }
         succeeded.push(member);
       } catch (error) {
         if (!doesAlreadyExistError(error)) {

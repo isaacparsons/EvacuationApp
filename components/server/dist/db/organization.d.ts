@@ -39,6 +39,12 @@ export default class OrganizationRepository {
         userId: number;
         organizationId: number;
     }) => Promise<import(".prisma/client").OrganizationMember | null>;
+    getOrganizationMemberByEmail: (data: {
+        email: string;
+        organizationId: number;
+    }) => Promise<(import(".prisma/client").OrganizationMember & {
+        user: import(".prisma/client").User;
+    }) | null>;
     getOrgWithAcceptedMembers: (data: {
         organizationId: number;
     }) => Promise<(import(".prisma/client").Organization & {

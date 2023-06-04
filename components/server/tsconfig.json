@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "target": "es2017",
     "outDir": "dist",
     "rootDir": "src",
@@ -23,10 +25,6 @@
     "listEmittedFiles": false,
     "listFiles": false,
     "pretty": true,
-
-    /* Experimental Options */
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": false,
 
     "lib": ["es2017", "esnext", "DOM"],
     "types": ["node", "jest"],
