@@ -126,6 +126,20 @@ const EvacuationEventResolver: Resolvers = {
       }
       return evacuationEvent;
     },
+    deleteEvacuationEvent: async (parent, args, context) => {
+      const { evacuationId } = args;
+      const evacuationEventRepository = new EvacuationEventRepository(context.db);
+      const existingEvacuationEvent = await evacuationEventRepository.getEvacuationEventById({
+        evacuationId
+      });
+      if (!existingEvacuationEvent) {
+        throw new Error("Event does not exist");
+      }
+      if (existingEvacuationEvent.status !== "ended") {
+        throw new Error("Event has not yet ended");
+      }
+      return evacuationEventRepository.deleteEvent({ evacuationId });
+    },
     createEvacuationEventResponse: async (parent, args, context) => {
       const { evacuationId, response } = args;
       const evacuationEventRepository = new EvacuationEventRepository(context.db);

@@ -136,36 +136,36 @@ const OrganizationResolver: Resolvers = {
       const notSignedUpUsers = succeededUsers.filter((user) => !user.accountCreated);
       const signedUpUsers = succeededUsers.filter((user) => user.accountCreated);
 
-      const completeSignupNotifications = notSignedUpUsers.map((user) => {
-        const token = tokenService.create(user);
-        return new EmailNotification(
-          emailService,
-          [user.email],
-          `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n`,
-          "Complete Signup",
-          `${process.env.CLIENT_URL}/completeSignup?token=${token}`
-        );
-      });
+      // const completeSignupNotifications = notSignedUpUsers.map((user) => {
+      //   const token = tokenService.create(user);
+      //   return new EmailNotification(
+      //     emailService,
+      //     [user.email],
+      //     `You have been invited to the organization: ${organization.name}. Visit the link below to complete signup: \n`,
+      //     "Complete Signup",
+      //     `${process.env.CLIENT_URL}/completeSignup?token=${token}`
+      //   );
+      // });
 
-      const invitedToOrgNotifications = signedUpUsers.map((user) => {
-        const emailNotification = new EmailNotification(
-          emailService,
-          [user.email],
-          `You have been invited to the organization: ${organization.name}. Open the app to respond to invitation: \n`,
-          `Invitation to ${organization.name}`
-        );
-        return emailNotification;
-      });
+      // const invitedToOrgNotifications = signedUpUsers.map((user) => {
+      //   const emailNotification = new EmailNotification(
+      //     emailService,
+      //     [user.email],
+      //     `You have been invited to the organization: ${organization.name}. Open the app to respond to invitation: \n`,
+      //     `Invitation to ${organization.name}`
+      //   );
+      //   return emailNotification;
+      // });
 
-      const notifications = [...completeSignupNotifications, ...invitedToOrgNotifications];
+      // const notifications = [...completeSignupNotifications, ...invitedToOrgNotifications];
 
-      await sendNotifications({
-        context,
-        notifications
-      });
-      if (failed.length > 0) {
-        throw new Error("failed to invite 1 or more users");
-      }
+      // await sendNotifications({
+      //   context,
+      //   notifications
+      // });
+      // if (failed.length > 0) {
+      //   throw new Error("failed to invite 1 or more users");
+      // }
       return succeeded;
     },
     updateOrgInvite: async (parent, args, context) => {
@@ -214,7 +214,8 @@ const OrganizationResolver: Resolvers = {
       let users: User[] = organization.members.map((member) => member.user);
       const notificationDetails = {
         subject: `Announcement - ${announcement.title}`,
-        message: announcement.description || ""
+        message: announcement.description || "",
+        appLink: `${process.env.APP_LINK}organization/${organizationId}/announcements`
       };
 
       if (groupIds && groupIds.length > 0) {

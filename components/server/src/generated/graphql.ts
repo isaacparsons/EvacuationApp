@@ -140,6 +140,7 @@ export type Mutation = {
   createGroup: Group;
   createOrganization: Organization;
   createOrganizationAnnouncement: Announcement;
+  deleteEvacuationEvent: EvacuationEvent;
   deleteGroup: Group;
   deleteOrganization: Organization;
   deleteOrganizationAnnouncement: Announcement;
@@ -196,6 +197,11 @@ export type MutationCreateOrganizationAnnouncementArgs = {
   groupIds?: InputMaybe<Array<Scalars['Int']>>;
   organizationId: Scalars['Int'];
   title: Scalars['String'];
+};
+
+
+export type MutationDeleteEvacuationEventArgs = {
+  evacuationId: Scalars['Int'];
 };
 
 
@@ -662,6 +668,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   createGroup?: Resolver<ResolversTypes['Group'], ParentType, ContextType, RequireFields<MutationCreateGroupArgs, 'groupNotificationSetting' | 'name' | 'organizationId'>>;
   createOrganization?: Resolver<ResolversTypes['Organization'], ParentType, ContextType, RequireFields<MutationCreateOrganizationArgs, 'name' | 'organizationNotificationSetting'>>;
   createOrganizationAnnouncement?: Resolver<ResolversTypes['Announcement'], ParentType, ContextType, RequireFields<MutationCreateOrganizationAnnouncementArgs, 'organizationId' | 'title'>>;
+  deleteEvacuationEvent?: Resolver<ResolversTypes['EvacuationEvent'], ParentType, ContextType, RequireFields<MutationDeleteEvacuationEventArgs, 'evacuationId'>>;
   deleteGroup?: Resolver<ResolversTypes['Group'], ParentType, ContextType, RequireFields<MutationDeleteGroupArgs, 'groupId'>>;
   deleteOrganization?: Resolver<ResolversTypes['Organization'], ParentType, ContextType, RequireFields<MutationDeleteOrganizationArgs, 'organizationId'>>;
   deleteOrganizationAnnouncement?: Resolver<ResolversTypes['Announcement'], ParentType, ContextType, RequireFields<MutationDeleteOrganizationAnnouncementArgs, 'announcementId'>>;

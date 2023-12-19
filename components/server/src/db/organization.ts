@@ -300,7 +300,7 @@ export default class OrganizationRepository {
 
   removeFromOrganization = async (data: { organizationId: number; userId: number }) => {
     const { userId, organizationId } = data;
-    return await this.db.organizationMember.delete({
+    const orgMember = await this.db.organizationMember.delete({
       where: {
         userId_organizationId: {
           userId,
@@ -311,6 +311,7 @@ export default class OrganizationRepository {
         user: true
       }
     });
+    return orgMember;
   };
 
   createOrganizationAnnouncement = async (data: {

@@ -34,6 +34,9 @@ export default class EvacuationEventRepository {
         evacuationId: number;
         status: string;
     }) => Promise<import(".prisma/client").EvacuationEvent>;
+    deleteEvent: (event: {
+        evacuationId: number;
+    }) => Promise<import(".prisma/client").EvacuationEvent>;
     createEventResponse: (data: {
         evacuationId: number;
         userId: number;

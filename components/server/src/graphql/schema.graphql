@@ -40,6 +40,7 @@ type Mutation {
   removeMembers(groupId: Int!, userIds: [Int!]!): [GroupMember!]!
   createEvacuationEvent(groupId: Int!, msg: String!): EvacuationEvent!
   updateEvacuationEvent(evacuationId: Int!, status: String!): EvacuationEvent!
+  deleteEvacuationEvent(evacuationId: Int!): EvacuationEvent!
   createEvacuationEventResponse(evacuationId: Int!, response: String!): EvacuationResponse!
   createOrganization(
     name: String!

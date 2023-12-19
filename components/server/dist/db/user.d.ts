@@ -29,11 +29,11 @@ export default class UserRepository {
     getJoinedEntities: (data: {
         userId: number;
     }) => Promise<(User & {
-        organizations: (import(".prisma/client").OrganizationMember & {
-            organization: import(".prisma/client").Organization;
-        })[];
         groups: (import(".prisma/client").GroupMember & {
             group: import(".prisma/client").Group;
+        })[];
+        organizations: (import(".prisma/client").OrganizationMember & {
+            organization: import(".prisma/client").Organization;
         })[];
     }) | null>;
 }

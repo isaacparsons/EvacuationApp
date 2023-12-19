@@ -9,14 +9,27 @@ import client from './graphql/client';
 import { ThemeProvider } from '@mui/material/styles';
 import Theme from 'Theme';
 
-ReactDOM.render(
-  <ThemeProvider theme={Theme}>
-    <ApolloProvider client={client}>
-      <App />
-    </ApolloProvider>
-  </ThemeProvider>,
-  document.getElementById('root')
-);
+import { createBrowserHistory } from 'history';
+
+const replaceHashPath = () => {
+  const history = createBrowserHistory();
+  const hash = history.location.hash;
+  if (hash) {
+    const path = hash.replace(/^#/, '');
+    if (path) {
+      history.replace(path);
+    }
+  }
+  ReactDOM.render(
+    <ThemeProvider theme={Theme}>
+      <ApolloProvider client={client}>
+        <App />
+      </ApolloProvider>
+    </ThemeProvider>,
+    document.getElementById('root')
+  );
+};
+replaceHashPath();
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

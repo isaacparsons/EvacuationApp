@@ -23,11 +23,10 @@ export default class PushNotificationService {
       app_id: process.env.ONESIGNAL_APP_ID as string,
       include_external_user_ids: usersIds,
       contents: {
-        en: message
+        en: message || ""
       },
       app_url
     };
-
     try {
       await this.client.createNotification(notification);
       return;

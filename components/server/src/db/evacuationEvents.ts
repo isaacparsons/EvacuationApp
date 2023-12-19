@@ -125,6 +125,15 @@ export default class EvacuationEventRepository {
     return evacuationEvent;
   };
 
+  deleteEvent = async (event: { evacuationId: number }) => {
+    const { evacuationId } = event;
+
+    const evacuationEvent = await this.db.evacuationEvent.delete({
+      where: { id: evacuationId }
+    });
+    return evacuationEvent;
+  };
+
   createEventResponse = async (data: {
     evacuationId: number;
     userId: number;
